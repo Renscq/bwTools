@@ -59,7 +59,7 @@ Acceptance criteria:
 
 ## 0.3.x - Zoom levels and statistics
 
-Status: **implemented in 0.3.0; local regression validation required.**
+Status: **implemented in 0.3.x; public zoom metadata API added in 0.3.1.**
 
 Scope:
 
@@ -74,6 +74,7 @@ Acceptance criteria:
 - Zoom omission remains a supported writer option.
 - Exact statistics remain available through `use_zoom = FALSE`.
 - Zoom-accelerated results identify their source and reduction level explicitly.
+- User-facing zoom inspection uses `zoominfo_bwg()` rather than internal metadata structures.
 
 Implementation notes:
 

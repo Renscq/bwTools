@@ -8,7 +8,8 @@ test_that("public API and S3 registration are available", {
     "seqinfo_bwg",
     "summary_bwg",
     "stats_bwg",
-    "write_bwg"
+    "write_bwg",
+    "zoominfo_bwg"
   )
 
   expect_true(all(expected_exports %in% getNamespaceExports("bwTools")))

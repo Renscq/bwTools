@@ -24,14 +24,13 @@ test_that("native BigWig writer creates readable zoom levels", {
     zoom = TRUE
   )
 
-  metadata <- bwTools:::bw_metadata(written$file, use_cache = FALSE)
-  expect_gt(metadata$header$n_levels, 0L)
-  expect_equal(nrow(metadata$zoom_levels), metadata$header$n_levels)
-  expect_true(all(metadata$zoom_levels$level > 0L))
-  expect_true(all(metadata$zoom_levels$data_offset > metadata$header$index_offset))
-  expect_true(all(metadata$zoom_levels$index_offset > metadata$zoom_levels$data_offset))
+  zoom_info <- zoominfo_bwg(written$file)
+  expect_gt(nrow(zoom_info), 0L)
+  expect_true(all(zoom_info$level > 0L))
+  expect_true(all(zoom_info$data_offset > 0))
+  expect_true(all(zoom_info$index_offset > zoom_info$data_offset))
 
-  zoom <- metadata$zoom_levels[1L]
+  zoom <- zoom_info[1L]
   records <- bwTools:::bw_bigwig_zoom_query(
     written$file,
     chrom = "chr1",
@@ -68,9 +67,8 @@ test_that("BigWig zoom levels can be disabled", {
     overwrite = TRUE,
     zoom = FALSE
   )
-  metadata <- bwTools:::bw_metadata(written$file, use_cache = FALSE)
-  expect_identical(metadata$header$n_levels, 0L)
-  expect_equal(nrow(metadata$zoom_levels), 0L)
+  zoom_info <- zoominfo_bwg(written$file)
+  expect_equal(nrow(zoom_info), 0L)
 })
 
 test_that("zoom summary records preserve whole-window aggregates", {

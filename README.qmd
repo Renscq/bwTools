@@ -1,4 +1,11 @@
-<!-- Generated from README.qmd. Edit README.qmd instead. -->
+---
+title: "bwTools"
+format:
+  gfm:
+    toc: true
+execute:
+  enabled: false
+---
 
 Current development release: **0.3.1**
 

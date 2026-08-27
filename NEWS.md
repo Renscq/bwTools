@@ -1,3 +1,11 @@
+# bwTools 0.3.1
+
+- Added public `zoominfo_bwg()` for stable inspection of BigWig zoom levels without accessing internal metadata structures.
+- Updated zoom regression tests to use the public zoom metadata interface where appropriate.
+- Replaced `README.md` as the documentation source with `README.qmd`; `README.md` is retained as the rendered GitHub-facing output.
+- Reworked the README into an executable manual validation workflow covering reader, writer, zoom, statistics, WIG, and bedGraph round trips.
+- Removed user-facing examples that accessed `bwTools:::bw_metadata()`.
+
 # bwTools 0.3.0
 
 - Added native-R BigWig zoom-level construction and writing.
