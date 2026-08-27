@@ -1,6 +1,6 @@
 <!-- Generated from README.qmd. Edit README.qmd instead. -->
 
-Current development release: **0.3.1**
+Current development release: **0.3.2**
 
 `bwTools` provides native-R I/O and indexed analysis for BigWig, WIG, and
 bedGraph genomic signal tracks. It is designed as the signal backend for
@@ -9,7 +9,7 @@ other compiled BigWig dependencies.
 
 This `README.qmd` is the source document. Render it with:
 
-```bash
+```{bash}
 quarto render README.qmd
 ```
 
@@ -420,13 +420,13 @@ stopifnot(
 
 A bedGraph record:
 
-```text
+```{text}
 chr1    499    524    9.1000
 ```
 
 is 0-based half-open and becomes:
 
-```text
+```{text}
 chr1    500    524    9.1000
 ```
 
@@ -450,7 +450,7 @@ devtools::check()
 
 Expected test status:
 
-```text
+```{text}
 FAIL 0
 WARN 0
 SKIP 0

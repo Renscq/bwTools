@@ -143,3 +143,10 @@ three-chromosome file and a synthetic 300-chromosome file exercising multi-level
 chromosome B+ trees and R-trees were readable by the reference C implementation.
 This validates the binary layout independently of bwTools' own reader. The R
 package tests remain the required runtime validation for the actual R writer.
+
+# Documentation conventions
+
+All language-tagged code fences in Markdown and QMD files must use braced
+Quarto/knitr syntax, for example `{r}`, `{bash}`, and `{text}`. Unbraced
+forms such as ` ```r`, ` ```bash`, and ` ```text` are not permitted.
+

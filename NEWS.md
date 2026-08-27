@@ -1,3 +1,8 @@
+# bwTools 0.3.2
+
+- Standardized all language-tagged Markdown and QMD code fences to braced Quarto/knitr form such as `{r}`, `{bash}`, and `{text}`.
+- Added a regression test that rejects unbraced language code fences in package Markdown and QMD files.
+
 # bwTools 0.3.1
 
 - Added public `zoominfo_bwg()` for stable inspection of BigWig zoom levels without accessing internal metadata structures.

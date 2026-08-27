@@ -1,7 +1,7 @@
 Package: bwTools
 Type: Package
 Title: Native R Tools for BigWig, WIG, and bedGraph Files
-Version: 0.3.1
+Version: 0.3.2
 Authors@R: person("Rensc", role = c("aut", "cre"), email = "rensc0718@163.com")
 Description: Provides native R implementations for reading and writing local
     BigWig files, constructing and querying BigWig zoom summaries, calculating
