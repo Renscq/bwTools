@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-27
-# Version: dev001
+# Version: dev002
 # Function: Read BigWig, WIG, and bedGraph files into BwgTrack-compatible objects
 # Input: One or more local genomic signal files
 # Output: BwgTrack-compatible object
@@ -44,7 +44,7 @@ read_bwg <- function(
     rep(format, n)
   }
   if (mode == "lazy" && any(formats != "bigwig")) {
-    bw_stop("bwTools 0.1.0 supports lazy access for BigWig files only.")
+    bw_stop("bwTools 0.1.x supports lazy access for BigWig files only.")
   }
 
   samples <- data.table::data.table(
@@ -82,12 +82,13 @@ read_bwg <- function(
       seqinfo <- data.table::data.table(chrom = unique(x$chrom), length = NA_integer_)
     }
 
-    seqinfo[, sample_id := sample_names[i]]
+    data.table::set(seqinfo, j = "sample_id", value = sample_names[i])
     data.table::setcolorder(seqinfo, c("sample_id", "chrom", "length"))
     seqinfo_list[[i]] <- seqinfo
 
     if (mode == "memory") {
-      x[, `:=`(sample_id = sample_names[i], strand = strand[i])]
+      data.table::set(x, j = "sample_id", value = sample_names[i])
+      data.table::set(x, j = "strand", value = strand[i])
       data.table::setcolorder(x, c("sample_id", "chrom", "start", "end", "value", "strand"))
       data_list[[i]] <- x
     }

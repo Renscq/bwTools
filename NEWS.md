@@ -1,3 +1,10 @@
+# bwTools 0.1.2
+
+- Fixed package-internal `data.table` awareness so `[.data.table` no longer falls back to data.frame semantics during `devtools::test()` or package checks.
+- Replaced package-internal `:=` update expressions with `data.table::set()` for explicit namespace-safe by-reference assignment.
+- Copy user-supplied `data.table` inputs in `bw_track()` before normalization to avoid modifying caller-owned objects by reference.
+- Added a regression test for the `.datatable.aware` package marker.
+
 # bwTools 0.1.1
 
 - Converted `NAMESPACE` and manual pages to a roxygen2-managed documentation workflow.

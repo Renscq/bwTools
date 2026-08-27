@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-27
-# Version: dev001
+# Version: dev002
 # Function: Read bedGraph and WIG signal files
 # Input: Local text signal file
 # Output: Canonical 1-based closed signal table
@@ -171,7 +171,9 @@ bw_read_wig <- function(file) {
     return(bw_empty_signal())
   }
   ans <- data.table::rbindlist(out[seq_len(out_n)])
-  ans[, `:=`(start = as.integer(start), end = as.integer(end), value = as.numeric(value))]
+  data.table::set(ans, j = "start", value = as.integer(ans[["start"]]))
+  data.table::set(ans, j = "end", value = as.integer(ans[["end"]]))
+  data.table::set(ans, j = "value", value = as.numeric(ans[["value"]]))
   data.table::setorderv(ans, c("chrom", "start", "end"))
   ans[]
 }

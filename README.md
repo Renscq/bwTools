@@ -1,6 +1,6 @@
 # bwTools
 
-Current development release: **0.1.1**
+Current development release: **0.1.2**
 
 `bwTools` is a native-R genomic signal I/O package designed to provide the
 BigWig/WIG/bedGraph backend used by GeneTrackR without requiring UCSC command-line

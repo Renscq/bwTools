@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-27
-# Version: dev002
+# Version: dev003
 # Function: Define package constants and internal caches
 # Input: None
 # Output: Internal constants and environments
@@ -14,6 +14,9 @@
 .BWT_DATA_HEADER_SIZE <- 24L
 
 .bwtools_cache <- new.env(parent = emptyenv())
+
+# Tell data.table that bwTools intentionally uses data.table query semantics.
+.datatable.aware <- TRUE
 
 #' bwTools: Native R tools for genomic signal tracks
 #'

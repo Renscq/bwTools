@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-27
-# Version: dev001
+# Version: dev002
 # Function: Retrieve genomic intervals from BwgTrack-compatible objects
 # Input: BwgTrack and genomic region
 # Output: In-memory signal data.table
@@ -54,10 +54,8 @@ retrieve_bwg <- function(object, chrom, start, end, samples = NULL, strand = "ig
     if (nrow(dt) == 0L) {
       return(bw_empty_signal(include_sample = TRUE))
     }
-    dt[, `:=`(
-      start = pmax(as.integer(start), query_start),
-      end = pmin(as.integer(end), query_end)
-    )]
+    data.table::set(dt, j = "start", value = pmax(as.integer(dt[["start"]]), query_start))
+    data.table::set(dt, j = "end", value = pmin(as.integer(dt[["end"]]), query_end))
     data.table::setorderv(dt, c("sample_id", "chrom", "start", "end"))
     return(dt[])
   }
@@ -70,7 +68,8 @@ retrieve_bwg <- function(object, chrom, start, end, samples = NULL, strand = "ig
     }
     x <- bw_bigwig_query(sample_tbl$file[i], query_chrom, query_start, query_end)
     if (nrow(x) == 0L) next
-    x[, `:=`(sample_id = sample_tbl$sample_id[i], strand = sample_tbl$strand[i])]
+    data.table::set(x, j = "sample_id", value = sample_tbl$sample_id[i])
+    data.table::set(x, j = "strand", value = sample_tbl$strand[i])
     data.table::setcolorder(x, c("sample_id", "chrom", "start", "end", "value", "strand"))
     out_n <- out_n + 1L
     out[[out_n]] <- x
@@ -97,7 +96,7 @@ seqinfo_bwg <- function(x) {
     if (all(sample_tbl$format == "bigwig")) {
       out <- lapply(seq_len(nrow(sample_tbl)), function(i) {
         z <- bw_bigwig_seqinfo(sample_tbl$file[i])
-        z[, sample_id := sample_tbl$sample_id[i]]
+        data.table::set(z, j = "sample_id", value = sample_tbl$sample_id[i])
         data.table::setcolorder(z, c("sample_id", "chrom", "length"))
         z
       })
