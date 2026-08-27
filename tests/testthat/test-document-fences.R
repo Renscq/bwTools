@@ -31,5 +31,5 @@ test_that("documentation code fences use braced language tags", {
     }
   }
 
-  expect_length(bad, 0L, info = paste(bad, collapse = "\n"))
+  expect_equal(bad, character())
 })

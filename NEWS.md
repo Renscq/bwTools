@@ -1,3 +1,16 @@
+# bwTools 0.3.4
+
+- Fixed WIG chromosome grouping where data.table non-standard evaluation caused every chromosome block to receive all signal intervals.
+- Fixed sample-specific chromosome-size selection and in-memory chromosome statistics affected by the same column-name scoping risk.
+- Made the documentation fence regression test compatible with older supported testthat releases.
+- Added regression tests for WIG chromosome isolation, sample-specific seqinfo selection, and chromosome-specific in-memory statistics.
+
+# bwTools 0.3.3
+
+- Reworked README signal round-trip validation to compare canonicalized signal tables rather than raw data-frame representations.
+- Added diagnostic output for WIG round-trip mismatches so coordinate, value, ordering, and type differences can be identified directly.
+- Added a bundled-example WIG round-trip regression test covering all 296 intervals and heterogeneous interval spans.
+
 # bwTools 0.3.2
 
 - Standardized all language-tagged Markdown and QMD code fences to braced Quarto/knitr form such as `{r}`, `{bash}`, and `{text}`.

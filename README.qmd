@@ -7,7 +7,7 @@ execute:
   enabled: false
 ---
 
-Current development release: **0.3.2**
+Current development release: **0.3.4**
 
 `bwTools` provides native-R I/O and indexed analysis for BigWig, WIG, and
 bedGraph genomic signal tracks. It is designed as the signal backend for
@@ -74,6 +74,98 @@ stopifnot(
   file.exists(bedgraph_file),
   file.exists(chrom_sizes_file)
 )
+```
+
+For round-trip checks, normalize the signal representation before comparing
+files. This keeps the test focused on genomic coordinates and values rather
+than row names or storage-specific attributes.
+
+```{r}
+canonical_signal <- function(x) {
+  columns <- c(
+    "sample_id",
+    "chrom",
+    "start",
+    "end",
+    "value",
+    "strand"
+  )
+
+  x <- as.data.frame(x)[, columns, drop = FALSE]
+  x$sample_id <- as.character(x$sample_id)
+  x$chrom <- as.character(x$chrom)
+  x$start <- as.integer(x$start)
+  x$end <- as.integer(x$end)
+  x$value <- as.numeric(x$value)
+  x$strand <- as.character(x$strand)
+
+  x <- x[
+    order(
+      x$sample_id,
+      x$chrom,
+      x$start,
+      x$end,
+      x$strand
+    ),
+    ,
+    drop = FALSE
+  ]
+  row.names(x) <- NULL
+  x
+}
+
+assert_signal_equal <- function(expected, observed, tolerance = 1e-4) {
+  expected <- canonical_signal(expected)
+  observed <- canonical_signal(observed)
+  comparison <- all.equal(
+    expected,
+    observed,
+    tolerance = tolerance,
+    check.attributes = FALSE
+  )
+
+  if (!isTRUE(comparison)) {
+    message("Signal round-trip comparison failed:")
+    print(comparison)
+
+    if (nrow(expected) != nrow(observed)) {
+      message(
+        "Row count: expected=",
+        nrow(expected),
+        ", observed=",
+        nrow(observed)
+      )
+    }
+
+    common_n <- min(nrow(expected), nrow(observed))
+    if (common_n > 0L) {
+      unequal <- vapply(
+        seq_len(common_n),
+        function(i) {
+          !isTRUE(
+            all.equal(
+              expected[i, , drop = FALSE],
+              observed[i, , drop = FALSE],
+              tolerance = tolerance,
+              check.attributes = FALSE
+            )
+          )
+        },
+        logical(1L)
+      )
+      first_bad <- which(unequal)[1L]
+      if (!is.na(first_bad)) {
+        message("First differing row: ", first_bad)
+        print(expected[first_bad, , drop = FALSE])
+        print(observed[first_bad, , drop = FALSE])
+      }
+    }
+
+    stop("Signal round-trip validation failed.", call. = FALSE)
+  }
+
+  invisible(TRUE)
+}
 ```
 
 ## Reader validation
@@ -382,14 +474,9 @@ bedgraph_roundtrip <- read_bwg(
   mode = "memory"
 )
 
-stopifnot(
-  isTRUE(
-    all.equal(
-      as.data.frame(track_bedgraph$data),
-      as.data.frame(bedgraph_roundtrip$data),
-      tolerance = 1e-4
-    )
-  )
+assert_signal_equal(
+  track_bedgraph$data,
+  bedgraph_roundtrip$data
 )
 ```
 
@@ -412,14 +499,9 @@ wig_roundtrip <- read_bwg(
   mode = "memory"
 )
 
-stopifnot(
-  isTRUE(
-    all.equal(
-      as.data.frame(track_bedgraph$data),
-      as.data.frame(wig_roundtrip$data),
-      tolerance = 1e-4
-    )
-  )
+assert_signal_equal(
+  track_bedgraph$data,
+  wig_roundtrip$data
 )
 ```
 

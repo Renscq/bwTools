@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-27
-# Version: dev002
+# Version: dev003
 # Function: Write BwgTrack-compatible objects to BigWig, WIG, or bedGraph files
 # Input: BwgTrack-compatible object, output format, and chromosome sizes
 # Output: One signal file per selected sample
@@ -58,7 +58,8 @@ bw_resolve_chrom_sizes <- function(object, chrom_sizes, sample_id) {
   }
   x <- data.table::copy(data.table::as.data.table(object$seqinfo))
   if ("sample_id" %in% names(x)) {
-    sample_specific <- x[x[["sample_id"]] == sample_id]
+    sample_idx <- which(x[["sample_id"]] == sample_id)
+    sample_specific <- x[sample_idx]
     if (nrow(sample_specific) > 0L) {
       x <- sample_specific
     } else {
@@ -159,15 +160,16 @@ bw_write_wig_table <- function(signal, file, compress = FALSE) {
   data.table::setorderv(x, c("chrom", "start", "end"))
 
   chrom_levels <- unique(x$chrom)
-  for (chrom in chrom_levels) {
-    y <- x[x[["chrom"]] == chrom]
+  for (chrom_name in chrom_levels) {
+    chrom_idx <- which(x[["chrom"]] == chrom_name)
+    y <- x[chrom_idx]
     if (nrow(y) == 0L) next
     block_start <- c(TRUE, y$span[-1L] != y$span[-nrow(y)])
     block_id <- cumsum(block_start)
     for (id in unique(block_id)) {
       block <- y[which(block_id == id)]
       current_span <- block$span[1L]
-      writeLines(paste0("variableStep chrom=", chrom, " span=", format(current_span, scientific = FALSE)), con)
+      writeLines(paste0("variableStep chrom=", chrom_name, " span=", format(current_span, scientific = FALSE)), con)
       lines <- paste(
         format(block$start, scientific = FALSE, trim = TRUE),
         format(block$value, scientific = FALSE, trim = TRUE, digits = 15),

@@ -8,11 +8,20 @@ retrieve_bwg(object, chrom, start, end, samples = NULL, strand = "ignore")
 }
 \arguments{
 \item{object}{A \code{BwgTrack}-compatible object.}
+
 \item{chrom}{Chromosome name.}
+
 \item{start}{Start coordinate in 1-based closed coordinates.}
+
 \item{end}{End coordinate in 1-based closed coordinates.}
+
 \item{samples}{Optional sample IDs.}
+
 \item{strand}{Optional strand selector: \code{+}, \code{-}, \code{*}, \code{both}, or \code{ignore}.}
 }
-\value{A signal data.table in 1-based closed coordinates.}
-\description{Retrieve signal intervals}
+\value{
+A signal data.table in 1-based closed coordinates.
+}
+\description{
+Retrieve signal intervals
+}

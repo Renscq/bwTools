@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-27
-# Version: dev001
+# Version: dev002
 # Function: Calculate exact or zoom-accelerated BigWig interval statistics
 # Input: BigWig path or BwgTrack-compatible object and genomic bins
 # Output: Per-bin signal statistics in 1-based closed coordinates
@@ -266,10 +266,12 @@ stats_bwg <- function(
     dt <- data.table::as.data.table(object$data)
     for (i in seq_len(nrow(sample_tbl))) {
       sid <- sample_tbl$sample_id[i]
-      signal <- dt[
-        dt[["sample_id"]] == sid & dt[["chrom"]] == chrom &
-          dt[["end"]] >= start & dt[["start"]] <= end
-      ]
+      keep <-
+        dt[["sample_id"]] == sid &
+        dt[["chrom"]] == chrom &
+        dt[["end"]] >= start &
+        dt[["start"]] <= end
+      signal <- dt[which(keep)]
       result <- bw_stats_from_signal(signal, chrom, start, end, n_bins, stat)
       data.table::set(result, j = "sample_id", value = rep(sid, nrow(result)))
       data.table::setcolorder(

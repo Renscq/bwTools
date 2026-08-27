@@ -82,6 +82,13 @@ Implementation notes:
 - Coarse lazy-BigWig statistics select the largest stored reduction level not exceeding half of the requested bin width, matching the selection strategy used by common BigWig readers.
 - Partial overlap between a requested bin and a zoom window is necessarily approximate; exact scientific calculations should use full-resolution data.
 
+### 0.3.4 regression note
+
+WIG chromosome grouping and other internal data.table filters must avoid bare
+external variable names that collide with column names. Package tests now cover
+chromosome isolation, sample-specific sequence metadata, and chromosome-specific
+in-memory statistics.
+
 ## 0.4.x - Subset and file transformation
 
 Scope:
