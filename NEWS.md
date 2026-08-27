@@ -1,3 +1,21 @@
+# bwTools 0.2.0
+
+- Added `write_bwg()` with the GeneTrackR-compatible `outdir`, `format`, `samples`, `chrom_sizes`, `overwrite`, and `compress` interface.
+- Added a pure R BigWig v4 writer with fixed-header and total-summary output, chromosome B+ tree construction, zlib-compressed bedGraph-like data blocks, and full-data R-tree construction.
+- Removed the need for UCSC `bedGraphToBigWig`; BigWig output does not invoke external executables or compiled BigWig libraries.
+- Added direct WIG and bedGraph export from in-memory `BwgTrack` objects.
+- Added chromosome-size, coordinate, chromosome-boundary, finite-value, and overlapping-interval validation before BigWig writing.
+- Allow `chrom_sizes` to be omitted when complete chromosome lengths are available from `BwgTrack$seqinfo`.
+- Preserve lazy same-format file copying without decoding the source track.
+- Added native binary packing tests and BigWig writer round-trip regression tests against the bundled example dataset.
+- BigWig zoom levels are intentionally not written in 0.2.x and remain planned for 0.3.x.
+
+# bwTools 0.1.3
+
+- Added a bundled three-chromosome BigWig example dataset under `inst/extdata/` for documentation and regression testing.
+- Added the matching bedGraph reference and chromosome-size file for coordinate/value validation and future writer round-trip tests.
+- Expanded `README.md` with package design, object contract, example-data description, lazy and memory BigWig workflows, bedGraph coordinate conversion, and the development roadmap.
+
 # bwTools 0.1.2
 
 - Fixed package-internal `data.table` awareness so `[.data.table` no longer falls back to data.frame semantics during `devtools::test()` or package checks.
@@ -24,9 +42,3 @@
 - Add a GeneTrackR-compatible `BwgTrack` object contract with memory and lazy
   bigWig modes.
 - Add chromosome metadata lookup and interval retrieval APIs.
-
-## Current limitations
-
-- BigWig writing is intentionally deferred to the next development stage.
-- Remote HTTP/HTTPS/FTP bigWig access is not implemented in 0.1.0.
-- Lazy access is currently supported for bigWig only.

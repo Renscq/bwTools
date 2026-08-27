@@ -9,9 +9,5 @@ summary_bwg(object)
 \arguments{
 \item{object}{A \code{BwgTrack}-compatible object.}
 }
-\value{
-A named list with object-level counts.
-}
-\description{
-Summarize a BwgTrack-compatible object
-}
+\value{A named list with object-level counts.}
+\description{Summarize a BwgTrack-compatible object}

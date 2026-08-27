@@ -24,6 +24,7 @@ Scope:
 - bedGraph, variableStep, and fixedStep BigWig data-block decoding.
 - Memory and lazy BigWig read modes.
 - Region retrieval and sequence metadata.
+- Bundled BigWig/bedGraph/chrom.sizes example dataset for integration and writer round-trip tests.
 
 Acceptance criteria:
 
@@ -33,23 +34,26 @@ Acceptance criteria:
 
 ## 0.2.x - Native BigWig writer
 
+Status: **implemented in 0.2.0; local regression validation required.**
+
 Scope:
 
 - Canonical signal validation and sorting.
 - Chromosome-size validation.
 - BigWig fixed header and total summary writer.
-- Chromosome B+ tree writer.
+- Chromosome B+ tree writer, including multi-level trees.
 - bedGraph-like full-data block encoder.
 - zlib block compression using base R.
-- Full-data R-tree construction and offset backfilling.
+- Full-data R-tree construction, including multi-level trees.
 - `write_bwg()` for BigWig, WIG, and bedGraph.
+- Lazy same-format file copy without decoding.
 
 The first writer release will intentionally omit zoom levels. A valid BigWig without zoom levels is sufficient for exact interval access and isolates writer correctness from summary-index complexity.
 
 Acceptance criteria:
 
 - bwTools can read its own BigWig output.
-- Reference readers can read the output when available.
+- Reference readers can read the output when available. A libBigWig reference-reader format check is part of development validation, while the package test suite remains R-only.
 - bedGraph -> BigWig -> bwTools region queries preserve coordinates and values.
 - No temporary UCSC conversion executable is invoked.
 
@@ -119,3 +123,12 @@ Scope:
 - Large-file benchmarks.
 - Public API stabilization and documentation.
 - Optional remote-range access only if it can be implemented without compromising the no-external-binary design.
+
+## 0.2.0 development validation note
+
+The BigWig v4 binary layout used by the native writer was independently checked
+against the supplied libBigWig C reader during development. Both a standard
+three-chromosome file and a synthetic 300-chromosome file exercising multi-level
+chromosome B+ trees and R-trees were readable by the reference C implementation.
+This validates the binary layout independently of bwTools' own reader. The R
+package tests remain the required runtime validation for the actual R writer.
