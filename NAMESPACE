@@ -1,0 +1,8 @@
+export(bw_detect_format)
+export(bw_track)
+export(is_bwg_track)
+export(read_bwg)
+export(retrieve_bwg)
+export(seqinfo_bwg)
+export(summary_bwg)
+S3method(print,bwToolsTrack)

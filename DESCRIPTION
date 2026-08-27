@@ -1,0 +1,19 @@
+Package: bwTools
+Type: Package
+Title: Native R Tools for BigWig, WIG, and bedGraph Files
+Version: 0.1.0
+Authors@R: person("Rensc", role = c("aut", "cre"), email = "rensc0718@163.com")
+Description: Provides native R implementations for reading local bigWig files and
+    reading WIG and bedGraph signal tracks. BigWig binary parsing uses base R
+    random-access binary I/O and zlib decompression without bundled C or C++
+    code or external UCSC executables. Signal objects follow the BwgTrack data
+    contract used by GeneTrackR for direct downstream interoperability.
+License: GPL-3
+Encoding: UTF-8
+Depends: R (>= 4.2.0)
+Imports: data.table
+Suggests: testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+NeedsCompilation: no
