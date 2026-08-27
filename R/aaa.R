@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-27
-# Version: dev001
+# Version: dev002
 # Function: Define package constants and internal caches
 # Input: None
 # Output: Internal constants and environments
@@ -14,3 +14,12 @@
 .BWT_DATA_HEADER_SIZE <- 24L
 
 .bwtools_cache <- new.env(parent = emptyenv())
+
+#' bwTools: Native R tools for genomic signal tracks
+#'
+#' Native R tools for reading and manipulating BigWig, WIG, and bedGraph
+#' signal tracks. In-memory objects follow the `BwgTrack` contract used by
+#' GeneTrackR and use 1-based closed coordinates.
+#'
+#' @keywords internal
+"_PACKAGE"

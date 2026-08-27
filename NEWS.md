@@ -1,3 +1,9 @@
+# bwTools 0.1.1
+
+- Converted `NAMESPACE` and manual pages to a roxygen2-managed documentation workflow.
+- Added package-level roxygen documentation and explicit documentation for the `print.bwToolsTrack()` S3 method.
+- Added a namespace regression test for the public API and S3 registration.
+
 # bwTools 0.1.0
 
 ## New features

@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-27
-# Version: dev001
+# Version: dev002
 # Function: Define the GeneTrackR-compatible genomic signal object
 # Input: Sample metadata, signal data, sequence metadata, and package metadata
 # Output: BwgTrack-compatible S3 object
@@ -91,6 +91,11 @@ is_bwg_track <- function(x) {
   inherits(x, "BwgTrack") && is.list(x) && !is.null(x$samples) && !is.null(x$meta)
 }
 
+#' Print a bwTools signal track
+#'
+#' @param x A `bwToolsTrack` object.
+#' @param ... Additional arguments reserved for future use.
+#' @return `x`, invisibly.
 #' @export
 print.bwToolsTrack <- function(x, ...) {
   cat("<bwTools BwgTrack>\n")
