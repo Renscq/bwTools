@@ -1,3 +1,15 @@
+# bwTools 0.3.0
+
+- Added native-R BigWig zoom-level construction and writing.
+- Added BigWig zoom-header parsing and zoom R-tree querying.
+- Added `stats_bwg()` for coverage-aware `mean`, `stdev`, `max`, `min`, `coverage`, and `sum` statistics across genomic bins.
+- Added automatic use of an appropriate zoom resolution for coarse lazy-BigWig statistics, with `use_zoom = FALSE` for exact full-resolution calculations.
+- Added `zoom` and `max_zoom_levels` controls to `write_bwg()`.
+- Preserved `zoom = FALSE` as a supported writer mode.
+- Added total-summary parsing to native BigWig metadata.
+- Added regression tests for zoom headers, zoom records, zoom-disabled output, exact statistics, missing bins, and zoom/full summary agreement.
+- Updated all Markdown R code fences to Quarto/knitr form using `{r}` chunk headers.
+
 # bwTools 0.2.0
 
 - Added `write_bwg()` with the GeneTrackR-compatible `outdir`, `format`, `samples`, `chrom_sizes`, `overwrite`, and `compress` interface.

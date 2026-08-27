@@ -21,3 +21,32 @@ test_that("native float32 writer is compatible with the reader decoder", {
   )
   expect_equal(observed, values, tolerance = 1e-6)
 })
+
+test_that("native zoom record encoder is compatible with the reader decoder", {
+  records <- data.table::data.table(
+    tid = c(0, 0),
+    start0 = c(100, 200),
+    end0 = c(150, 260),
+    valid_count = c(50, 40),
+    min_value = c(1.5, -2),
+    max_value = c(3.5, 4),
+    sum_data = c(100, 80),
+    sum_squared = c(250, 200)
+  )
+  raw_records <- bwTools:::bw_encode_zoom_block(records)
+  observed <- bwTools:::bw_decode_zoom_block(
+    raw_records,
+    endian = "little",
+    tid = 0,
+    query_start = 0,
+    query_end = 1000,
+    chrom = "chr1"
+  )
+  expect_equal(observed$start0, records$start0)
+  expect_equal(observed$end0, records$end0)
+  expect_equal(observed$valid_count, records$valid_count)
+  expect_equal(observed$min_value, records$min_value, tolerance = 1e-6)
+  expect_equal(observed$max_value, records$max_value, tolerance = 1e-6)
+  expect_equal(observed$sum_data, records$sum_data, tolerance = 1e-6)
+  expect_equal(observed$sum_squared, records$sum_squared, tolerance = 1e-6)
+})

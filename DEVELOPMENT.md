@@ -34,7 +34,7 @@ Acceptance criteria:
 
 ## 0.2.x - Native BigWig writer
 
-Status: **implemented in 0.2.0; local regression validation required.**
+Status: **implemented and locally validated.**
 
 Scope:
 
@@ -59,6 +59,8 @@ Acceptance criteria:
 
 ## 0.3.x - Zoom levels and statistics
 
+Status: **implemented in 0.3.0; local regression validation required.**
+
 Scope:
 
 - Zoom-level construction.
@@ -70,6 +72,14 @@ Acceptance criteria:
 
 - Zoom and full-data summaries agree within floating-point tolerance.
 - Zoom omission remains a supported writer option.
+- Exact statistics remain available through `use_zoom = FALSE`.
+- Zoom-accelerated results identify their source and reduction level explicitly.
+
+Implementation notes:
+
+- Zoom summary records store covered bases, minimum, maximum, sum, and squared sum for each reduction window.
+- Coarse lazy-BigWig statistics select the largest stored reduction level not exceeding half of the requested bin width, matching the selection strategy used by common BigWig readers.
+- Partial overlap between a requested bin and a zoom window is necessarily approximate; exact scientific calculations should use full-resolution data.
 
 ## 0.4.x - Subset and file transformation
 

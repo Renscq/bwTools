@@ -2,5 +2,6 @@ bwTools implements the BigWig binary format in R.
 
 The implementation was designed with reference to the BigWig structures and
 algorithms present in libBigWig 0.4.8 source code supplied during development,
-including its header, chromosome tree, R-tree, data block, and writer layouts.
-No libBigWig C/C++ source is compiled, linked, or shipped as part of bwTools.
+including its header, chromosome tree, R-tree, full-resolution data blocks,
+zoom summary blocks, interval statistics, and writer layouts. No libBigWig
+C/C++ source is compiled, linked, or shipped as part of bwTools.

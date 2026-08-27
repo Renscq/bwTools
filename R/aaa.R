@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-27
-# Version: dev004
+# Version: dev005
 # Function: Define package constants and internal caches
 # Input: None
 # Output: Internal constants and environments
@@ -16,6 +16,9 @@
 .BWT_WRITE_BUFFER_SIZE <- 32768L
 .BWT_CHROM_TREE_BLOCK_SIZE <- 256L
 .BWT_RTREE_BLOCK_SIZE <- 64L
+.BWT_DEFAULT_MAX_ZOOM_LEVELS <- 10L
+.BWT_ZOOM_RECORD_SIZE <- 32L
+.BWT_ZOOM_BLOCK_HEADER_SIZE <- 4L
 .BWT_FLOAT32_MAX <- 3.402823466e38
 
 .bwtools_cache <- new.env(parent = emptyenv())

@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-27
-# Version: dev001
+# Version: dev002
 # Function: Write BwgTrack-compatible objects to BigWig, WIG, or bedGraph files
 # Input: BwgTrack-compatible object, output format, and chromosome sizes
 # Output: One signal file per selected sample
@@ -232,6 +232,10 @@ bw_write_lazy_copy <- function(sample_tbl, outdir, format, overwrite) {
 #' @param overwrite Whether existing output files may be replaced.
 #' @param compress Whether WIG or bedGraph output should be gzip-compressed.
 #'   BigWig data blocks are always compressed internally by the file format.
+#' @param zoom Whether native BigWig output should include zoom summary levels.
+#'   Ignored for WIG, bedGraph, and direct lazy BigWig file copies.
+#' @param max_zoom_levels Maximum number of BigWig zoom levels to create when
+#'   `zoom = TRUE`.
 #' @return Invisibly returns a data.table containing sample IDs, output files,
 #'   and formats.
 #' @export
@@ -242,7 +246,9 @@ write_bwg <- function(
   samples = NULL,
   chrom_sizes = NULL,
   overwrite = FALSE,
-  compress = FALSE
+  compress = FALSE,
+  zoom = TRUE,
+  max_zoom_levels = 10L
 ) {
   if (!is_bwg_track(object)) {
     bw_stop("`object` must be a BwgTrack-compatible object.")
@@ -288,7 +294,11 @@ write_bwg <- function(
       signal <- bw_validate_signal_for_write(signal, cs)
       file <- file.path(outdir, paste0(sid, ".bigwig"))
       bw_check_output_file(file, overwrite)
-      bw_write_bigwig_file(signal, cs, file)
+      bw_write_bigwig_file(
+        signal, cs, file,
+        zoom = zoom,
+        max_zoom_levels = max_zoom_levels
+      )
     } else if (format == "bedgraph") {
       file <- file.path(outdir, paste0(sid, ".bedgraph", if (isTRUE(compress)) ".gz" else ""))
       bw_check_output_file(file, overwrite)

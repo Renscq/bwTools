@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-27
-# Version: dev001
+# Version: dev002
 # Function: Read local BigWig files using native R binary I/O
 # Input: Local BigWig file paths and genomic intervals
 # Output: Chromosome metadata and 1-based closed signal intervals
@@ -101,6 +101,19 @@ bw_float32_vector <- function(x, offsets, endian) {
   out
 }
 
+
+
+bw_double <- function(x, offset, endian) {
+  offset <- as.integer(offset)[1L]
+  idx <- seq.int(offset + 1L, offset + 8L)
+  if (offset < 0L || max(idx) > length(x)) {
+    bw_stop("Binary double read exceeds the available buffer.")
+  }
+  con <- rawConnection(x[idx], open = "rb")
+  on.exit(close(con), add = TRUE)
+  readBin(con, what = numeric(), n = 1L, size = 8L, endian = endian)
+}
+
 bw_fixed_string <- function(x) {
   zero <- which(as.integer(x) == 0L)
   if (length(zero) > 0L) {
@@ -139,6 +152,38 @@ bw_read_header <- function(con) {
     summary_offset = bw_u64(x, 44L, endian),
     uncompress_buf_size = bw_u32(x, 52L, endian),
     extension_offset = bw_u64(x, 56L, endian)
+  )
+}
+
+bw_read_zoom_headers <- function(con, header) {
+  n_levels <- as.integer(header$n_levels)
+  if (n_levels < 1L) {
+    return(data.table::data.table(
+      level = integer(),
+      data_offset = numeric(),
+      index_offset = numeric()
+    ))
+  }
+  x <- bw_read_exact(con, .BWT_HEADER_SIZE, as.numeric(n_levels) * 24L)
+  offsets <- seq.int(0L, by = 24L, length.out = n_levels)
+  data.table::data.table(
+    level = as.numeric(vapply(offsets, function(z) bw_u32(x, z, header$endian), numeric(1L))),
+    data_offset = vapply(offsets, function(z) bw_u64(x, z + 8L, header$endian), numeric(1L)),
+    index_offset = vapply(offsets, function(z) bw_u64(x, z + 16L, header$endian), numeric(1L))
+  )
+}
+
+bw_read_total_summary <- function(con, header) {
+  if (header$summary_offset <= 0) {
+    return(NULL)
+  }
+  x <- bw_read_exact(con, header$summary_offset, .BWT_SUMMARY_SIZE)
+  list(
+    n_bases_covered = bw_u64(x, 0L, header$endian),
+    min_value = bw_double(x, 8L, header$endian),
+    max_value = bw_double(x, 16L, header$endian),
+    sum_data = bw_double(x, 24L, header$endian),
+    sum_squared = bw_double(x, 32L, header$endian)
   )
 }
 
@@ -218,19 +263,28 @@ bw_metadata <- function(file, use_cache = TRUE) {
   con <- base::file(file, open = "rb")
   on.exit(close(con), add = TRUE)
   header <- bw_read_header(con)
+  zoom_levels <- bw_read_zoom_headers(con, header)
+  total_summary <- bw_read_total_summary(con, header)
   chromosomes <- bw_read_chrom_tree(con, header)
-  out <- list(file = file, header = header, chromosomes = chromosomes)
+  out <- list(
+    file = file,
+    header = header,
+    zoom_levels = zoom_levels,
+    total_summary = total_summary,
+    chromosomes = chromosomes
+  )
   if (isTRUE(use_cache)) {
     assign(key, out, envir = .bwtools_cache)
   }
   out
 }
 
-bw_read_index_header <- function(con, header) {
-  if (header$index_offset <= 0) {
-    bw_stop("The BigWig file does not contain a full-data R-tree index.")
+bw_read_index_header <- function(con, header, index_offset = header$index_offset) {
+  index_offset <- as.numeric(index_offset)[1L]
+  if (!is.finite(index_offset) || index_offset <= 0) {
+    bw_stop("The BigWig file does not contain the requested R-tree index.")
   }
-  x <- bw_read_exact(con, header$index_offset, .BWT_INDEX_HEADER_SIZE)
+  x <- bw_read_exact(con, index_offset, .BWT_INDEX_HEADER_SIZE)
   endian <- header$endian
   if (bw_u32(x, 0L, endian) != .BWT_INDEX_MAGIC) {
     bw_stop("Invalid BigWig R-tree index magic number.")
@@ -244,7 +298,7 @@ bw_read_index_header <- function(con, header) {
     base_end = bw_u32(x, 28L, endian),
     index_size = bw_u64(x, 32L, endian),
     items_per_slot = bw_u32(x, 40L, endian),
-    root_offset = header$index_offset + .BWT_INDEX_HEADER_SIZE
+    root_offset = index_offset + .BWT_INDEX_HEADER_SIZE
   )
 }
 
@@ -365,6 +419,115 @@ bw_decode_block <- function(x, endian, tid, query_start, query_end, chrom) {
     end = as.integer(end1),
     value = as.numeric(value)
   )
+}
+
+bw_decode_zoom_block <- function(x, endian, tid, query_start, query_end, chrom) {
+  if (length(x) %% .BWT_ZOOM_RECORD_SIZE != 0L) {
+    bw_stop("Truncated or malformed BigWig zoom data block.")
+  }
+  n <- length(x) %/% .BWT_ZOOM_RECORD_SIZE
+  if (n < 1L) {
+    return(data.table::data.table())
+  }
+  offsets <- seq.int(0L, by = .BWT_ZOOM_RECORD_SIZE, length.out = n)
+  record_tid <- bw_u32_vector(x, offsets, endian)
+  start0 <- bw_u32_vector(x, offsets + 4L, endian)
+  end0 <- bw_u32_vector(x, offsets + 8L, endian)
+  valid_count <- bw_u32_vector(x, offsets + 12L, endian)
+  min_value <- bw_float32_vector(x, offsets + 16L, endian)
+  max_value <- bw_float32_vector(x, offsets + 20L, endian)
+  sum_data <- bw_float32_vector(x, offsets + 24L, endian)
+  sum_squared <- bw_float32_vector(x, offsets + 28L, endian)
+  keep <- record_tid == tid & end0 > query_start & start0 < query_end
+  if (!any(keep)) {
+    return(data.table::data.table())
+  }
+  data.table::data.table(
+    chrom = rep(chrom, sum(keep)),
+    start0 = as.numeric(start0[keep]),
+    end0 = as.numeric(end0[keep]),
+    valid_count = as.numeric(valid_count[keep]),
+    min_value = as.numeric(min_value[keep]),
+    max_value = as.numeric(max_value[keep]),
+    sum_data = as.numeric(sum_data[keep]),
+    sum_squared = as.numeric(sum_squared[keep])
+  )
+}
+
+bw_choose_zoom_level <- function(metadata, start, end, n_bins) {
+  z <- metadata$zoom_levels
+  if (is.null(z) || nrow(z) < 1L) {
+    return(NULL)
+  }
+  bases_per_bin <- (as.numeric(end) - as.numeric(start) + 1) / as.numeric(n_bins)
+  target <- bases_per_bin / 2
+  eligible <- z[z[["level"]] <= target]
+  if (nrow(eligible) < 1L) {
+    return(NULL)
+  }
+  eligible[which.max(eligible[["level"]])]
+}
+
+bw_bigwig_zoom_query <- function(file, chrom, start, end, level = NULL, n_bins = 1L) {
+  file <- bw_validate_local_file(file)
+  metadata <- bw_metadata(file)
+  chrom_idx <- match(chrom, metadata$chromosomes$chrom)
+  if (is.na(chrom_idx)) {
+    bw_stop(paste0("Chromosome `", chrom, "` was not found in the BigWig file."))
+  }
+  query_start <- as.numeric(start) - 1
+  query_end <- min(as.numeric(end), metadata$chromosomes$length[chrom_idx])
+  if (query_start >= query_end) {
+    return(data.table::data.table())
+  }
+  if (is.null(level)) {
+    zoom <- bw_choose_zoom_level(metadata, start, end, n_bins)
+  } else {
+    level <- as.numeric(level)[1L]
+    zoom_idx <- match(level, metadata$zoom_levels$level)
+    zoom <- if (is.na(zoom_idx)) NULL else metadata$zoom_levels[zoom_idx]
+  }
+  if (is.null(zoom) || nrow(zoom) < 1L) {
+    return(data.table::data.table())
+  }
+
+  con <- base::file(file, open = "rb")
+  on.exit(close(con), add = TRUE)
+  index <- bw_read_index_header(con, metadata$header, zoom$index_offset[1L])
+  blocks <- bw_collect_blocks(
+    con = con,
+    node_offset = index$root_offset,
+    endian = metadata$header$endian,
+    tid = metadata$chromosomes$tid[chrom_idx],
+    query_start = query_start,
+    query_end = query_end
+  )
+  if (nrow(blocks) < 1L) {
+    return(data.table::data.table())
+  }
+  out <- vector("list", nrow(blocks))
+  out_n <- 0L
+  for (i in seq_len(nrow(blocks))) {
+    block <- bw_read_exact(con, blocks$offset[i], blocks$size[i])
+    if (metadata$header$uncompress_buf_size > 0) {
+      block <- bw_decompress_block(block)
+    }
+    decoded <- bw_decode_zoom_block(
+      block, metadata$header$endian, metadata$chromosomes$tid[chrom_idx],
+      query_start, query_end, chrom
+    )
+    if (nrow(decoded) > 0L) {
+      out_n <- out_n + 1L
+      out[[out_n]] <- decoded
+    }
+  }
+  if (out_n < 1L) {
+    return(data.table::data.table())
+  }
+  ans <- data.table::rbindlist(out[seq_len(out_n)], use.names = TRUE)
+  data.table::setorderv(ans, c("start0", "end0"))
+  attr(ans, "zoom_level") <- as.numeric(zoom$level[1L])
+  ans[]
 }
 
 bw_bigwig_seqinfo <- function(file) {

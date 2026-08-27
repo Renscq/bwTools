@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-27
-# Version: dev001
+# Version: dev002
 # Function: Write local BigWig files using native R binary I/O
 # Input: Canonical 1-based closed signal intervals and chromosome sizes
 # Output: Local BigWig files without external executables or compiled code
@@ -213,7 +213,12 @@ bw_encode_bedgraph_block <- function(tid, start0, end0, value) {
   c(header, payload)
 }
 
-bw_build_rtree <- function(index_entries, absolute_offset, block_size = .BWT_RTREE_BLOCK_SIZE) {
+bw_build_rtree <- function(
+  index_entries,
+  absolute_offset,
+  block_size = .BWT_RTREE_BLOCK_SIZE,
+  items_per_slot = 1L
+) {
   index_entries <- data.table::copy(data.table::as.data.table(index_entries))
   if (nrow(index_entries) < 1L) {
     bw_stop("Cannot build a BigWig R-tree without data blocks.")
@@ -337,7 +342,7 @@ bw_build_rtree <- function(index_entries, absolute_offset, block_size = .BWT_RTR
     bw_pack_u32(b$chrom_end),
     bw_pack_u32(b$base_end),
     bw_pack_u64(index_size),
-    bw_pack_u32(1L),
+    bw_pack_u32(items_per_slot),
     bw_pack_u32(0L)
   )
   c(header, body)
@@ -355,11 +360,22 @@ bw_bigwig_summary <- function(signal) {
   )
 }
 
-bw_build_header <- function(chrom_tree_offset, data_offset, index_offset, summary_offset, uncompress_buf_size) {
+bw_build_header <- function(
+  chrom_tree_offset,
+  data_offset,
+  index_offset,
+  summary_offset,
+  uncompress_buf_size,
+  n_levels = 0L
+) {
+  n_levels <- as.integer(n_levels)[1L]
+  if (is.na(n_levels) || n_levels < 0L || n_levels > 65535L) {
+    bw_stop("`n_levels` must be between 0 and 65535.")
+  }
   c(
     bw_pack_u32(.BWT_BIGWIG_MAGIC),
     bw_pack_u16(4L),
-    bw_pack_u16(0L),
+    bw_pack_u16(n_levels),
     bw_pack_u64(chrom_tree_offset),
     bw_pack_u64(data_offset),
     bw_pack_u64(index_offset),
@@ -372,6 +388,23 @@ bw_build_header <- function(chrom_tree_offset, data_offset, index_offset, summar
   )
 }
 
+bw_build_zoom_headers_raw <- function(zoom_headers) {
+  zoom_headers <- data.table::as.data.table(zoom_headers)
+  if (nrow(zoom_headers) < 1L) {
+    return(raw())
+  }
+  out <- vector("list", nrow(zoom_headers))
+  for (i in seq_len(nrow(zoom_headers))) {
+    out[[i]] <- c(
+      bw_pack_u32(zoom_headers$level[i]),
+      bw_pack_u32(0L),
+      bw_pack_u64(zoom_headers$data_offset[i]),
+      bw_pack_u64(zoom_headers$index_offset[i])
+    )
+  }
+  do.call(c, out)
+}
+
 bw_build_summary_raw <- function(summary) {
   c(
     bw_pack_u64(summary$n_bases_covered),
@@ -382,16 +415,223 @@ bw_build_summary_raw <- function(summary) {
   )
 }
 
-bw_write_bigwig_file <- function(signal, chrom_sizes, file) {
+bw_select_zoom_levels <- function(signal, chrom_sizes, max_zoom_levels = .BWT_DEFAULT_MAX_ZOOM_LEVELS) {
+  max_zoom_levels <- suppressWarnings(as.integer(max_zoom_levels)[1L])
+  if (is.na(max_zoom_levels) || max_zoom_levels < 0L || max_zoom_levels > 65535L) {
+    bw_stop("`max_zoom_levels` must be an integer between 0 and 65535.")
+  }
+  if (max_zoom_levels == 0L || nrow(signal) < 1L) {
+    return(integer())
+  }
+  max_chrom <- max(as.numeric(chrom_sizes$length))
+  if (!is.finite(max_chrom) || max_chrom < 1) {
+    return(integer())
+  }
+  mean_width <- floor(mean(as.numeric(signal$end) - as.numeric(signal$start) + 1))
+  first_level <- max(10, mean_width * 16)
+  first_level <- min(first_level, max_chrom)
+  if (first_level < 1 || first_level > 2^32 - 1) {
+    return(integer())
+  }
+  levels <- numeric()
+  current <- as.numeric(first_level)
+  while (length(levels) < max_zoom_levels && current <= max_chrom && current <= 2^32 - 1) {
+    levels <- c(levels, current)
+    if (current > (2^32 - 1) / 4) break
+    next_level <- current * 4
+    if (next_level <= current) break
+    current <- next_level
+  }
+  as.numeric(unique(levels))
+}
+
+bw_build_zoom_records <- function(signal, chrom_sizes, level) {
+  level <- as.numeric(level)[1L]
+  if (!is.finite(level) || level < 1 || level != floor(level)) {
+    bw_stop("Zoom reduction level must be a positive integer.")
+  }
+  signal <- data.table::copy(data.table::as.data.table(signal))
+  chrom_sizes <- data.table::copy(data.table::as.data.table(chrom_sizes))
+  if (nrow(signal) < 1L) {
+    return(data.table::data.table())
+  }
+  data.table::setorderv(signal, c("tid", "start", "end"))
+  chrom_length <- setNames(as.numeric(chrom_sizes$length), as.character(chrom_sizes$tid))
+  out <- vector("list", nrow(signal))
+  out_n <- 0L
+
+  flush_record <- function(tid, bin_start, bin_end, valid_count, min_value, max_value, sum_data, sum_squared) {
+    data.table::data.table(
+      tid = as.numeric(tid),
+      start0 = as.numeric(bin_start),
+      end0 = as.numeric(bin_end),
+      valid_count = as.numeric(valid_count),
+      min_value = as.numeric(min_value),
+      max_value = as.numeric(max_value),
+      sum_data = as.numeric(sum_data),
+      sum_squared = as.numeric(sum_squared)
+    )
+  }
+
+  current_tid <- NA_real_
+  current_start <- NA_real_
+  current_end <- NA_real_
+  valid_count <- 0
+  min_value <- NA_real_
+  max_value <- NA_real_
+  sum_data <- 0
+  sum_squared <- 0
+
+  emit_current <- function() {
+    if (is.na(current_tid) || valid_count <= 0) return(NULL)
+    flush_record(
+      current_tid, current_start, current_end, valid_count,
+      min_value, max_value, sum_data, sum_squared
+    )
+  }
+
+  for (i in seq_len(nrow(signal))) {
+    tid <- as.numeric(signal$tid[i])
+    chr_len <- chrom_length[[as.character(tid)]]
+    if (is.null(chr_len) || !is.finite(chr_len)) {
+      bw_stop("Failed to resolve chromosome length while constructing BigWig zoom levels.")
+    }
+    pos <- as.numeric(signal$start[i]) - 1
+    interval_end <- as.numeric(signal$end[i])
+    value <- as.numeric(signal$value[i])
+    while (pos < interval_end) {
+      bin_start <- floor(pos / level) * level
+      bin_end <- min(bin_start + level, chr_len)
+      overlap_end <- min(interval_end, bin_end)
+      width <- overlap_end - pos
+      if (width <= 0) {
+        bw_stop("Internal zero-width overlap while constructing BigWig zoom levels.")
+      }
+
+      same_bin <- !is.na(current_tid) && current_tid == tid && current_start == bin_start
+      if (!same_bin) {
+        record <- emit_current()
+        if (!is.null(record)) {
+          out_n <- out_n + 1L
+          if (out_n > length(out)) length(out) <- max(out_n, length(out) * 2L)
+          out[[out_n]] <- record
+        }
+        current_tid <- tid
+        current_start <- bin_start
+        current_end <- bin_end
+        valid_count <- 0
+        min_value <- value
+        max_value <- value
+        sum_data <- 0
+        sum_squared <- 0
+      }
+
+      valid_count <- valid_count + width
+      min_value <- min(min_value, value)
+      max_value <- max(max_value, value)
+      sum_data <- sum_data + width * value
+      sum_squared <- sum_squared + width * value^2
+      pos <- overlap_end
+    }
+  }
+
+  record <- emit_current()
+  if (!is.null(record)) {
+    out_n <- out_n + 1L
+    if (out_n > length(out)) length(out) <- out_n
+    out[[out_n]] <- record
+  }
+  if (out_n < 1L) {
+    return(data.table::data.table())
+  }
+  ans <- data.table::rbindlist(out[seq_len(out_n)], use.names = TRUE)
+  data.table::setorderv(ans, c("tid", "start0", "end0"))
+  ans[]
+}
+
+bw_encode_zoom_block <- function(records) {
+  records <- data.table::as.data.table(records)
+  n <- nrow(records)
+  if (n < 1L) return(raw())
+  tid_raw <- matrix(bw_pack_u32_vector(records$tid), nrow = 4L)
+  start_raw <- matrix(bw_pack_u32_vector(records$start0), nrow = 4L)
+  end_raw <- matrix(bw_pack_u32_vector(records$end0), nrow = 4L)
+  count_raw <- matrix(bw_pack_u32_vector(records$valid_count), nrow = 4L)
+  min_raw <- matrix(bw_pack_float32_vector(records$min_value), nrow = 4L)
+  max_raw <- matrix(bw_pack_float32_vector(records$max_value), nrow = 4L)
+  sum_raw <- matrix(bw_pack_float32_vector(records$sum_data), nrow = 4L)
+  sumsq_raw <- matrix(bw_pack_float32_vector(records$sum_squared), nrow = 4L)
+  as.raw(as.vector(rbind(
+    tid_raw, start_raw, end_raw, count_raw,
+    min_raw, max_raw, sum_raw, sumsq_raw
+  )))
+}
+
+bw_write_zoom_level <- function(con, records, level) {
+  records <- data.table::copy(data.table::as.data.table(records))
+  if (nrow(records) < 1L) {
+    bw_stop("Cannot write an empty BigWig zoom level.")
+  }
+  block_limit <- floor(.BWT_WRITE_BUFFER_SIZE / .BWT_ZOOM_RECORD_SIZE)
+  chunks <- split(seq_len(nrow(records)), ceiling(seq_len(nrow(records)) / block_limit))
+  data_offset <- bw_tell(con)
+  bw_write_raw(con, bw_pack_u32(length(chunks)))
+
+  index_parts <- vector("list", length(chunks))
+  for (i in seq_along(chunks)) {
+    x <- records[chunks[[i]]]
+    raw_block <- bw_encode_zoom_block(x)
+    if (length(raw_block) > .BWT_WRITE_BUFFER_SIZE) {
+      bw_stop("Internal BigWig zoom block exceeds the configured uncompressed buffer size.")
+    }
+    compressed <- base::memCompress(raw_block, type = "gzip")
+    block_offset <- bw_tell(con)
+    bw_write_raw(con, compressed)
+    index_parts[[i]] <- data.table::data.table(
+      chrom_start = x$tid[1L],
+      base_start = x$start0[1L],
+      chrom_end = x$tid[nrow(x)],
+      base_end = x$end0[nrow(x)],
+      data_offset = block_offset,
+      data_size = length(compressed)
+    )
+  }
+  index_entries <- data.table::rbindlist(index_parts, use.names = TRUE)
+  index_offset <- bw_tell(con)
+  bw_write_raw(con, bw_build_rtree(
+    index_entries,
+    absolute_offset = index_offset,
+    items_per_slot = block_limit
+  ))
+  list(
+    level = as.numeric(level),
+    data_offset = as.numeric(data_offset),
+    index_offset = as.numeric(index_offset)
+  )
+}
+
+bw_write_bigwig_file <- function(
+  signal,
+  chrom_sizes,
+  file,
+  zoom = TRUE,
+  max_zoom_levels = .BWT_DEFAULT_MAX_ZOOM_LEVELS
+) {
   signal <- data.table::copy(data.table::as.data.table(signal))
   chrom_sizes <- data.table::copy(data.table::as.data.table(chrom_sizes))
   if (nrow(signal) < 1L) {
     bw_stop("BigWig output requires at least one signal interval.")
   }
 
+  zoom_levels <- if (isTRUE(zoom)) {
+    bw_select_zoom_levels(signal, chrom_sizes, max_zoom_levels = max_zoom_levels)
+  } else {
+    integer()
+  }
+  n_levels <- length(zoom_levels)
   summary <- bw_bigwig_summary(signal)
-  summary_offset <- .BWT_HEADER_SIZE
-  chrom_tree_offset <- .BWT_HEADER_SIZE + .BWT_SUMMARY_SIZE
+  summary_offset <- .BWT_HEADER_SIZE + n_levels * 24L
+  chrom_tree_offset <- summary_offset + .BWT_SUMMARY_SIZE
   chrom_tree_raw <- bw_build_chrom_tree(chrom_sizes, absolute_offset = chrom_tree_offset)
   data_offset <- chrom_tree_offset + length(chrom_tree_raw)
 
@@ -404,7 +644,8 @@ bw_write_bigwig_file <- function(signal, chrom_sizes, file) {
     if (!ok && file.exists(tmp)) unlink(tmp)
   }, add = TRUE)
 
-  bw_write_raw(con, raw(.BWT_HEADER_SIZE + .BWT_SUMMARY_SIZE))
+  placeholder_size <- .BWT_HEADER_SIZE + n_levels * 24L + .BWT_SUMMARY_SIZE
+  bw_write_raw(con, raw(placeholder_size))
   bw_write_raw(con, chrom_tree_raw)
   if (bw_tell(con) != data_offset) {
     bw_stop("Internal BigWig data offset mismatch before writing signal blocks.")
@@ -450,8 +691,22 @@ bw_write_bigwig_file <- function(signal, chrom_sizes, file) {
 
   index_entries <- data.table::rbindlist(index_parts, use.names = TRUE)
   index_offset <- bw_tell(con)
-  index_raw <- bw_build_rtree(index_entries, absolute_offset = index_offset)
-  bw_write_raw(con, index_raw)
+  bw_write_raw(con, bw_build_rtree(index_entries, absolute_offset = index_offset))
+
+  zoom_headers <- vector("list", n_levels)
+  if (n_levels > 0L) {
+    for (i in seq_along(zoom_levels)) {
+      records <- bw_build_zoom_records(signal, chrom_sizes, zoom_levels[i])
+      zoom_headers[[i]] <- bw_write_zoom_level(con, records, zoom_levels[i])
+      rm(records)
+    }
+  }
+  zoom_headers_dt <- if (n_levels > 0L) {
+    data.table::rbindlist(zoom_headers, use.names = TRUE)
+  } else {
+    data.table::data.table(level = integer(), data_offset = numeric(), index_offset = numeric())
+  }
+
   bw_write_raw(con, bw_pack_u32(.BWT_BIGWIG_MAGIC))
 
   header_raw <- bw_build_header(
@@ -459,14 +714,22 @@ bw_write_bigwig_file <- function(signal, chrom_sizes, file) {
     data_offset = data_offset,
     index_offset = index_offset,
     summary_offset = summary_offset,
-    uncompress_buf_size = .BWT_WRITE_BUFFER_SIZE
+    uncompress_buf_size = .BWT_WRITE_BUFFER_SIZE,
+    n_levels = n_levels
   )
+  zoom_header_raw <- bw_build_zoom_headers_raw(zoom_headers_dt)
   summary_raw <- bw_build_summary_raw(summary)
-  if (length(header_raw) != .BWT_HEADER_SIZE || length(summary_raw) != .BWT_SUMMARY_SIZE) {
-    bw_stop("Internal BigWig header or summary size mismatch.")
+  if (length(header_raw) != .BWT_HEADER_SIZE ||
+      length(zoom_header_raw) != n_levels * 24L ||
+      length(summary_raw) != .BWT_SUMMARY_SIZE) {
+    bw_stop("Internal BigWig header, zoom header, or summary size mismatch.")
   }
   seek(con, where = 0, origin = "start", rw = "write")
   bw_write_raw(con, header_raw)
+  if (n_levels > 0L) {
+    seek(con, where = .BWT_HEADER_SIZE, origin = "start", rw = "write")
+    bw_write_raw(con, zoom_header_raw)
+  }
   seek(con, where = summary_offset, origin = "start", rw = "write")
   bw_write_raw(con, summary_raw)
   close(con)
@@ -485,3 +748,4 @@ bw_write_bigwig_file <- function(signal, chrom_sizes, file) {
   ok <- TRUE
   normalizePath(file, winslash = "/", mustWork = TRUE)
 }
+

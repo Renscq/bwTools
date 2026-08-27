@@ -11,7 +11,9 @@ write_bwg(
   samples = NULL,
   chrom_sizes = NULL,
   overwrite = FALSE,
-  compress = FALSE
+  compress = FALSE,
+  zoom = TRUE,
+  max_zoom_levels = 10L
 )
 }
 \arguments{
@@ -31,6 +33,12 @@ file or table. If omitted, complete chromosome lengths are taken from
 
 \item{compress}{Whether WIG or bedGraph output should be gzip-compressed.
 BigWig data blocks are always compressed internally by the file format.}
+
+\item{zoom}{Whether native BigWig output should include zoom summary levels.
+Ignored for WIG, bedGraph, and direct lazy BigWig file copies.}
+
+\item{max_zoom_levels}{Maximum number of BigWig zoom levels to create when
+\code{zoom = TRUE}.}
 }
 \value{
 Invisibly returns a data.table containing sample IDs, output files,
