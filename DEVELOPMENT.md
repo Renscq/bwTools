@@ -91,18 +91,35 @@ in-memory statistics.
 
 ## 0.4.x - Subset and file transformation
 
+Status: **implemented in 0.4.0.**
+
 Scope:
 
-- `retrieve_bwg()` for in-memory retrieval.
-- `subset_bwg()` for file-to-file genomic extraction.
-- Streaming BigWig -> BigWig subset without loading a whole genome signal into memory.
+- `retrieve_bwg()` for single-region retrieval.
+- `subset_bwg()` for multi-region in-memory and file-to-file extraction.
+- Indexed lazy BigWig extraction without loading the complete source track.
 - Cross-format subset output to BigWig, WIG, or bedGraph.
+- Explicit empty-sample behavior for file output.
 
 Acceptance criteria:
 
 - Subset coordinates are clipped correctly.
 - Empty regions produce valid empty results or explicit output behavior.
-- Large-file subset memory use scales with queried blocks, not source file size.
+- Large-file subset memory use scales with the selected intervals and queried
+  BigWig blocks, not the complete source file size.
+
+Implementation notes:
+
+- Regions use 1-based closed coordinates and are treated as a genomic union.
+- Overlapping and directly adjacent regions are merged before retrieval.
+- Signal intervals crossing a subset boundary are clipped without coordinate
+  rebasing.
+- Lazy BigWig sources are queried through the native R-tree index for each
+  normalized region.
+- The 0.4.0 writer path materializes only the selected subset before calling the
+  existing writer; a whole source track is never loaded solely for subsetting.
+- Empty in-memory subsets are valid. File output errors by default when a
+  selected sample is empty, or records it explicitly when `empty = "skip"`.
 
 ## 0.5.x - Merge semantics
 

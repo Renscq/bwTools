@@ -1,3 +1,14 @@
+# bwTools 0.4.0
+
+- Added `subset_bwg()` for multi-region genomic extraction from memory and lazy BigWig tracks.
+- Added indexed lazy BigWig subsetting so only R-tree blocks overlapping requested regions are decoded.
+- Added region normalization that merges overlapping or directly adjacent intervals before extraction.
+- Added boundary clipping while preserving original genomic coordinates and chromosome lengths.
+- Added BigWig, WIG, and bedGraph subset output through the native writer stack.
+- Added explicit empty-sample handling for file output with `empty = "error"` or `empty = "skip"`.
+- Added regression tests for memory and lazy subsetting, cross-format round trips, empty regions, sample preservation, and coordinate validation.
+- Expanded `README.qmd` with executable subset validation examples.
+
 # bwTools 0.3.4
 
 - Fixed WIG chromosome grouping where data.table non-standard evaluation caused every chromosome block to receive all signal intervals.
