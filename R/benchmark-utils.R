@@ -1,6 +1,6 @@
 # Author: Rensc
-# Date: 2026-08-28
-# Version: dev001
+# Date: 2026-08-29
+# Version: dev002
 # Function: Provide internal helpers for large BigWig benchmarking
 # Input: Benchmark configuration and measured R expressions
 # Output: Normalized regions, timing metrics, and benchmark summaries
@@ -212,10 +212,14 @@ bw_benchmark_measure <- function(fun, warmup = 0L) {
   )
   elapsed <- proc.time() - before
   final_gc <- suppressWarnings(gc())
+  live_heap_after_mb <- bw_benchmark_gc_used_mb(final_gc)
   peak_heap_mb <- bw_benchmark_gc_peak_mb(final_gc)
-  heap_delta_mb <- if (
+  peak_heap_delta_mb <- if (
     is.finite(peak_heap_mb) && is.finite(baseline_heap_mb)
   ) max(peak_heap_mb - baseline_heap_mb, 0) else NA_real_
+  live_heap_delta_mb <- if (
+    is.finite(live_heap_after_mb) && is.finite(baseline_heap_mb)
+  ) live_heap_after_mb - baseline_heap_mb else NA_real_
 
   list(
     value = value,
@@ -225,8 +229,11 @@ bw_benchmark_measure <- function(fun, warmup = 0L) {
     user_sec = unname(elapsed[["user.self"]]),
     system_sec = unname(elapsed[["sys.self"]]),
     baseline_heap_mb = baseline_heap_mb,
+    live_heap_after_mb = live_heap_after_mb,
     peak_heap_mb = peak_heap_mb,
-    heap_delta_mb = heap_delta_mb,
+    peak_heap_delta_mb = peak_heap_delta_mb,
+    live_heap_delta_mb = live_heap_delta_mb,
+    heap_delta_mb = peak_heap_delta_mb,
     result_mb = if (is.null(value)) NA_real_ else as.numeric(object.size(value)) / 1024^2,
     result_rows = if (is.null(value)) NA_integer_ else bw_benchmark_result_rows(value)
   )
@@ -261,7 +268,10 @@ bw_benchmark_result_row <- function(
     user_sec = measurement$user_sec,
     system_sec = measurement$system_sec,
     baseline_heap_mb = measurement$baseline_heap_mb,
+    live_heap_after_mb = measurement$live_heap_after_mb,
     peak_heap_mb = measurement$peak_heap_mb,
+    peak_heap_delta_mb = measurement$peak_heap_delta_mb,
+    live_heap_delta_mb = measurement$live_heap_delta_mb,
     heap_delta_mb = measurement$heap_delta_mb,
     result_mb = measurement$result_mb,
     result_rows = measurement$result_rows,
@@ -291,7 +301,10 @@ bw_benchmark_skipped_row <- function(operation, variant, file_mb, region = NULL,
     user_sec = NA_real_,
     system_sec = NA_real_,
     baseline_heap_mb = NA_real_,
+    live_heap_after_mb = NA_real_,
     peak_heap_mb = NA_real_,
+    peak_heap_delta_mb = NA_real_,
+    live_heap_delta_mb = NA_real_,
     heap_delta_mb = NA_real_,
     result_mb = NA_real_,
     result_rows = NA_integer_
@@ -390,7 +403,10 @@ bw_benchmark_summary <- function(results) {
       median_elapsed_sec = median_or_na(ok[["elapsed_sec"]]),
       min_elapsed_sec = min_or_na(ok[["elapsed_sec"]]),
       max_elapsed_sec = max_or_na(ok[["elapsed_sec"]]),
+      median_live_heap_after_mb = median_or_na(ok[["live_heap_after_mb"]]),
       median_peak_heap_mb = median_or_na(ok[["peak_heap_mb"]]),
+      median_peak_heap_delta_mb = median_or_na(ok[["peak_heap_delta_mb"]]),
+      median_live_heap_delta_mb = median_or_na(ok[["live_heap_delta_mb"]]),
       median_heap_delta_mb = median_or_na(ok[["heap_delta_mb"]]),
       median_result_mb = median_or_na(ok[["result_mb"]]),
       median_result_rows = median_or_na(as.numeric(ok[["result_rows"]])),

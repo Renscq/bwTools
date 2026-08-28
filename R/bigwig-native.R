@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-29
-# Version: dev003
+# Version: dev004
 # Function: Read local BigWig files using native R binary I/O
 # Input: Local BigWig file paths and genomic intervals
 # Output: Chromosome metadata and 1-based closed signal intervals
@@ -603,12 +603,11 @@ bw_bigwig_query <- function(file, chrom, start, end) {
     return(bw_empty_signal())
   }
 
-  capacity <- max(1024, min(.Machine$integer.max, as.numeric(nrow(blocks)) * 1024))
-  capacity <- as.integer(capacity)
-  start_value <- integer(capacity)
-  end_value <- integer(capacity)
-  signal_value <- numeric(capacity)
-  used <- 0L
+  start_chunks <- vector("list", nrow(blocks))
+  end_chunks <- vector("list", nrow(blocks))
+  value_chunks <- vector("list", nrow(blocks))
+  chunk_n <- 0L
+  interval_n <- 0
   needs_sort <- FALSE
   previous_start <- -Inf
   previous_end <- -Inf
@@ -650,38 +649,28 @@ bw_bigwig_query <- function(file, chrom, start, end) {
     previous_start <- start1[n_decoded]
     previous_end <- end1[n_decoded]
 
-    needed <- as.numeric(used) + as.numeric(n_decoded)
-    if (needed > .Machine$integer.max) {
+    interval_n <- interval_n + as.numeric(n_decoded)
+    if (interval_n > .Machine$integer.max) {
       bw_stop("Queried BigWig interval count exceeds the supported R vector length.")
     }
-    if (needed > capacity) {
-      new_capacity <- max(needed, ceiling(as.numeric(capacity) * 1.75))
-      if (new_capacity > .Machine$integer.max) {
-        new_capacity <- .Machine$integer.max
-      }
-      capacity <- as.integer(new_capacity)
-      length(start_value) <- capacity
-      length(end_value) <- capacity
-      length(signal_value) <- capacity
-    }
 
-    needed <- as.integer(needed)
-    idx <- seq.int(used + 1L, needed)
-    start_value[idx] <- as.integer(start1)
-    end_value[idx] <- as.integer(end1)
-    signal_value[idx] <- decoded$value
-    used <- needed
+    chunk_n <- chunk_n + 1L
+    start_chunks[[chunk_n]] <- as.integer(start1)
+    end_chunks[[chunk_n]] <- as.integer(end1)
+    value_chunks[[chunk_n]] <- decoded$value
   }
 
-  if (used < 1L) {
+  if (chunk_n < 1L) {
     return(bw_empty_signal())
   }
 
-  length(start_value) <- used
-  length(end_value) <- used
-  length(signal_value) <- used
+  start_value <- unlist(start_chunks, use.names = FALSE)
+  end_value <- unlist(end_chunks, use.names = FALSE)
+  signal_value <- unlist(value_chunks, use.names = FALSE)
+  interval_n <- length(start_value)
+
   ans <- data.table::data.table(
-    chrom = rep(chrom, used),
+    chrom = rep(chrom, interval_n),
     start = start_value,
     end = end_value,
     value = signal_value

@@ -266,14 +266,80 @@ Implementation notes:
 
 ## 0.7.1 - Benchmark-driven optimization
 
-Planned:
+Status: **implemented; repeat real large-file benchmark required.**
 
-- Run 0.7.0 on real large RNA-seq and Ribo-seq BigWig files.
-- Identify whether bottlenecks are metadata parsing, R-tree traversal, block
-  decompression, data.table materialization, zoom aggregation, or writing.
-- Optimize only measured bottlenecks.
-- Introduce streaming writer changes only if benchmarked peak memory justifies
-  the additional implementation complexity.
+Measured bottlenecks from the first real dense BigWig benchmark:
+
+- Lazy metadata loading was already fast and is unchanged.
+- Zoom statistics were already fast and are unchanged.
+- Full-resolution statistics spent substantially more time and heap than
+  indexed retrieval because the old path materialized all intervals and then
+  looped across them in R.
+- Large indexed retrieval showed acceptable elapsed time but excessive temporary
+  heap relative to the final returned signal table.
+
+Implemented optimizations:
+
+- Stream full-resolution BigWig blocks directly into statistical bin
+  accumulators without constructing an intermediate signal table.
+- Vectorize accumulation for intervals contained within one output bin and loop
+  only across the much smaller set of intervals spanning bin boundaries.
+- Decode full-data blocks into reusable coordinate/value vectors.
+- Materialize indexed retrieval into growable typed vectors and build one final
+  data.table instead of one data.table per block followed by `rbindlist()`.
+- Skip redundant list binding and sorting for single-result retrieval.
+- Avoid copying the complete memory-mode signal table before region filtering.
+
+Acceptance criteria:
+
+- Exact streaming statistics match memory-mode exact statistics for all six
+  public statistics.
+- Indexed retrieval matches the bundled bedGraph reference after optimization.
+- Public API, BwgTrack schema v2, coordinate conventions, zoom behavior, and
+  benchmark output contract remain unchanged.
+- Repeat the same real-file 0.7.0 benchmark configuration and verify lower
+  `stats_full` elapsed time/heap and lower retrieval heap without regressions in
+  `read_lazy` or `stats_zoom`.
+- Defer streaming-writer changes until write benchmarks demonstrate a concrete
+  bottleneck.
+
+## 0.7.2 - Indexed retrieval and memory-diagnostic refinement
+
+Status: **implemented; repeat real large-file benchmark required.**
+
+Measured 0.7.1 outcome:
+
+- Block-streamed exact statistics produced the intended large speedup and are
+  retained unchanged.
+- Growable-vector indexed retrieval did not consistently improve elapsed time
+  and could increase temporary R-heap use because repeated vector extension may
+  trigger reallocations and copies.
+- Existing benchmark peak-heap metrics did not distinguish retained live memory
+  from historical maximum R-heap use.
+
+Implemented refinements:
+
+- Store decoded BigWig query blocks as primitive `start`, `end`, and `value`
+  vector chunks.
+- Flatten each vector family once after decoding rather than repeatedly growing
+  large R vectors.
+- Construct only one final retrieval data.table and retain the existing
+  single-result fast path.
+- Record live R heap after garbage collection separately from the maximum heap
+  observed since `gc(reset = TRUE)`.
+- Report `peak_heap_delta_mb` and `live_heap_delta_mb` separately while keeping
+  `heap_delta_mb` as a compatibility alias for the peak delta.
+
+Acceptance criteria:
+
+- Indexed retrieval remains signal-identical to the bundled bedGraph reference.
+- Streaming exact statistics remain unchanged and continue to match memory-mode
+  exact statistics.
+- Re-run the same dense real-BigWig benchmark used for 0.7.1 and compare
+  retrieval elapsed time plus both peak and live heap deltas.
+- `stats_full`, `stats_zoom`, and `read_lazy` should not regress materially.
+- Do not introduce new public user-facing analysis parameters during this
+  optimization stage.
 
 ## 0.8.x - Statistics and zoom refinements
 

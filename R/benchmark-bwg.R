@@ -1,6 +1,6 @@
 # Author: Rensc
-# Date: 2026-08-28
-# Version: dev001
+# Date: 2026-08-29
+# Version: dev002
 # Function: Run structured large BigWig performance benchmarks
 # Input: One local BigWig file and benchmark configuration
 # Output: bwToolsBenchmark object with raw and summarized metrics
@@ -36,8 +36,9 @@
 #'   regions are recorded as skipped rather than forcing an expensive exact
 #'   calculation.
 #' @return A `bwToolsBenchmark` object containing `system`, `file`, `config`,
-#'   `regions`, `results`, and `summary` components. Peak memory is an
-#'   approximate R heap maximum from `gc()` rather than operating-system RSS.
+#'   `regions`, `results`, and `summary` components. Memory metrics distinguish
+#'   current live R heap after garbage collection from the approximate maximum
+#'   R heap observed since `gc(reset = TRUE)`; neither metric is process RSS.
 #' @export
 benchmark_bwg <- function(
   file,
@@ -388,7 +389,10 @@ benchmark_bwg <- function(
     warmup = warmup,
     operations = operations,
     full_stats_max_bases = full_stats_max_bases,
-    memory_metric = "approximate R heap max used from gc(reset = TRUE); not process RSS",
+    memory_metric = paste(
+      "R heap metrics from gc(): live_heap_after_mb is current used heap after GC;",
+      "peak_heap_mb is max used since gc(reset = TRUE); neither is process RSS"
+    ),
     cache_note = "metadata_cache_cold clears only the bwTools metadata cache, not the operating-system file cache"
   )
 

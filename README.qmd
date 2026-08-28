@@ -8,15 +8,17 @@ execute:
 
 # bwTools
 
-Current development release: **0.7.0**
+Current development release: **0.7.2**
 
 `bwTools` provides native-R reading, writing, indexed retrieval, merging, and
 statistics for BigWig, WIG, and bedGraph genomic signal tracks.
 
 The 0.6.x series standardized the public API and the `BwgTrack` object contract
 so downstream packages can use bwTools without depending on internal list
-implementation details. Version 0.7.0 adds a reproducible large-BigWig benchmark
-suite before performance optimization is attempted.
+implementation details. Version 0.7.0 established reproducible large-BigWig
+benchmarks; version 0.7.1 introduced block-streamed exact statistics, and version
+0.7.2 refines indexed retrieval and benchmark memory diagnostics without changing
+the public API.
 
 ## Core principles
 
@@ -577,7 +579,6 @@ bench <- benchmark_bwg(
 
 bench
 bench$summary
-
 ```
 
 Do not depend on private functions such as:
@@ -678,6 +679,80 @@ For multi-gigabyte files, `read_memory` may require much more RAM than the
 compressed BigWig file size and can terminate the R process if system memory is
 insufficient.
 
+### 0.7.2 benchmark-driven retrieval refinement
+
+Version 0.7.2 keeps the block-streamed exact-statistics path introduced in 0.7.1
+and changes only the indexed-retrieval materialization strategy and benchmark
+memory reporting.
+
+The 0.7.1 real-file benchmark showed that streaming exact statistics substantially
+reduced elapsed time, while the growable-vector retrieval path did not improve
+large indexed queries consistently. Version 0.7.2 therefore retains the
+successful statistics path and replaces repeated vector growth with chunked
+primitive vectors:
+
+```{text}
+stats_bwg(use_zoom = FALSE)
+  BigWig R-tree -> one compressed block -> bin accumulators -> next block
+
+retrieve_bwg()
+  BigWig blocks -> primitive vector chunks -> one-shot flatten -> one data.table
+```
+
+Each decoded retrieval block contributes only `start`, `end`, and `value`
+vectors. These chunks are flattened once after all relevant blocks are decoded.
+This avoids both per-block data.table construction and repeated resizing/copying
+of large R vectors.
+
+The benchmark memory contract is also more explicit in 0.7.2. Results now
+separate current live heap after garbage collection from the maximum heap seen
+since the benchmark reset:
+
+```{text}
+baseline_heap_mb      live R heap immediately before the timed expression
+live_heap_after_mb    live R heap after the expression and garbage collection
+peak_heap_mb          maximum R heap observed since gc(reset = TRUE)
+peak_heap_delta_mb    peak_heap_mb minus baseline_heap_mb
+live_heap_delta_mb    live_heap_after_mb minus baseline_heap_mb
+heap_delta_mb         compatibility alias of peak_heap_delta_mb
+```
+
+These remain R-heap diagnostics, not operating-system RSS measurements.
+`heap_delta_mb` is retained so benchmark-processing scripts written for 0.7.0 or
+0.7.1 continue to work.
+
+To compare 0.7.1 and 0.7.2, rerun the same benchmark configuration and inspect:
+
+```{text}
+retrieve    median_elapsed_sec / median_peak_heap_delta_mb / median_live_heap_delta_mb
+stats_full  should retain the 0.7.1 streaming performance
+stats_zoom  should not regress
+read_lazy   should not regress
+```
+
+Performance is machine-, file-, and signal-density-dependent, so bwTools does
+not enforce fixed timing thresholds in package tests. Regression tests require
+retrieved signals and exact statistics to remain identical to reference paths.
+
+A larger exact-statistics stress test can still be enabled explicitly by raising
+the safety bound:
+
+```{r}
+bench_full_large <- benchmark_bwg(
+  "/data/sample.bigwig",
+  sample_id = "sampleA",
+  region_sizes = c(1e6, 1e7),
+  n_bins = 1000L,
+  iterations = 3L,
+  warmup = 1L,
+  operations = "stats_full",
+  full_stats_max_bases = 1e7
+)
+```
+
+Keep the default bound for routine diagnostics; raise it only when intentionally
+stress-testing the exact full-resolution path.
+
 ### Benchmark result contract
 
 The returned object contains:
@@ -698,9 +773,12 @@ Important `results` metrics include:
 elapsed_sec       wall-clock elapsed time
 user_sec          R user CPU time
 system_sec        R system CPU time
-baseline_heap_mb  R heap use immediately before the timed expression
-peak_heap_mb      approximate maximum R heap use
-heap_delta_mb     approximate additional R heap above baseline
+baseline_heap_mb      live R heap immediately before the timed expression
+live_heap_after_mb    live R heap after the expression and garbage collection
+peak_heap_mb          approximate maximum R heap since the benchmark reset
+peak_heap_delta_mb    approximate peak heap increase above baseline
+live_heap_delta_mb    retained live heap change relative to baseline
+heap_delta_mb         compatibility alias of peak_heap_delta_mb
 result_mb         returned R object size
 result_rows       returned interval/bin count
 mbases_per_sec    genomic-region throughput
@@ -712,9 +790,11 @@ status            ok / error / skipped
 message           captured diagnostic message
 ```
 
-`baseline_heap_mb`, `peak_heap_mb`, and `heap_delta_mb` are derived from
-`gc(reset = TRUE)` and are **not** operating-system RSS. Likewise, `metadata_cache_cold` clears only the bwTools metadata cache; it
-does not flush the operating-system file cache. These limitations are recorded
+The heap metrics are derived from `gc()` and are **not** operating-system RSS.
+`live_heap_after_mb` is measured after garbage collection while the benchmark
+result remains referenced; `peak_heap_mb` is the maximum R heap observed since
+`gc(reset = TRUE)`. Likewise, `metadata_cache_cold` clears only the bwTools
+metadata cache; it does not flush the operating-system file cache. These limitations are recorded
 in `bench$config` so benchmark reports are not over-interpreted.
 
 To save benchmark tables, use normal table-writing tools explicitly:
@@ -778,8 +858,9 @@ SKIP 0
 - **0.6.1**: standardized public API and BwgTrack schema v2.
 - **0.6.2**: hardened BigWig detection and path-encoding safety.
 - **0.6.3**: fixed automatic BigWig dispatch after format detection.
-- **0.7.0**: reproducible large-BigWig benchmark suite — current stage.
-- **0.7.1**: optimize only bottlenecks demonstrated by 0.7.0 benchmark results.
+- **0.7.0**: reproducible large-BigWig benchmark suite.
+- **0.7.1**: block-streamed exact-statistics optimization.
+- **0.7.2**: chunked indexed retrieval and clearer heap diagnostics — current stage.
 - **0.8.x**: statistics and zoom refinements where justified by benchmarks.
 - **0.9.x**: API freeze, cross-platform checks, and release hardening.
 - **1.0.0**: stable public release.

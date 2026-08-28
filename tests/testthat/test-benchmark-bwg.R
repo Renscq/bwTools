@@ -25,7 +25,9 @@ test_that("benchmark_bwg returns a structured benchmark object", {
   expect_equal(nrow(benchmark$regions), 2L)
   expect_true(all(c(
     "operation", "variant", "region_id", "elapsed_sec", "baseline_heap_mb",
-    "peak_heap_mb", "heap_delta_mb", "result_mb", "result_rows", "status", "message"
+    "live_heap_after_mb", "peak_heap_mb", "peak_heap_delta_mb",
+    "live_heap_delta_mb", "heap_delta_mb", "result_mb", "result_rows",
+    "status", "message"
   ) %in% names(benchmark$results)))
   expect_true(all(c(
     "read_lazy", "retrieve", "stats_zoom", "stats_full"
@@ -165,4 +167,38 @@ test_that("explicit benchmark regions remain separate cases", {
   expect_equal(benchmark$regions$region_id, c("left", "right"))
   expect_equal(benchmark$regions$start, c(500L, 600L))
   expect_equal(benchmark$regions$end, c(599L, 699L))
+})
+
+
+test_that("benchmark memory metrics separate live and peak R heap", {
+  file <- system.file(
+    "extdata", "bwtools_example.bigwig",
+    package = "bwTools", mustWork = TRUE
+  )
+
+  benchmark <- benchmark_bwg(
+    file,
+    sample_id = "example",
+    region_sizes = 500L,
+    iterations = 1L,
+    warmup = 0L,
+    operations = "retrieve"
+  )
+
+  result <- benchmark$results[1L]
+  expect_true(is.finite(result$baseline_heap_mb))
+  expect_true(is.finite(result$live_heap_after_mb))
+  expect_true(is.finite(result$peak_heap_mb))
+  expect_true(is.finite(result$peak_heap_delta_mb))
+  expect_true(is.finite(result$live_heap_delta_mb))
+  expect_equal(result$heap_delta_mb, result$peak_heap_delta_mb)
+  expect_true(result$peak_heap_mb >= result$live_heap_after_mb)
+
+  expect_true(all(c(
+    "median_live_heap_after_mb",
+    "median_peak_heap_mb",
+    "median_peak_heap_delta_mb",
+    "median_live_heap_delta_mb",
+    "median_heap_delta_mb"
+  ) %in% names(benchmark$summary)))
 })

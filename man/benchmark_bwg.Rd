@@ -50,8 +50,9 @@ calculation.}
 }
 \value{
 A \code{bwToolsBenchmark} object containing \code{system}, \code{file}, \code{config},
-\code{regions}, \code{results}, and \code{summary} components. Peak memory is an
-approximate R heap maximum from \code{gc()} rather than operating-system RSS.
+\code{regions}, \code{results}, and \code{summary} components. Memory metrics distinguish
+current live R heap after garbage collection from the approximate maximum
+R heap observed since \code{gc(reset = TRUE)}; neither metric is process RSS.
 }
 \description{
 Profiles the native bwTools BigWig workflow using deterministic genomic

@@ -1,3 +1,47 @@
+# bwTools 0.7.2
+
+## Indexed retrieval and benchmark memory refinement
+
+- Retained the 0.7.1 block-streamed exact-statistics implementation after real
+  large-file benchmarking confirmed a substantial elapsed-time improvement.
+- Replaced growable full-query vectors in indexed BigWig retrieval with
+  per-block primitive-vector chunks followed by one-shot flattening.
+- Avoided repeated R vector resizing and copying while continuing to avoid
+  per-block data.table construction.
+- Added `live_heap_after_mb`, `peak_heap_delta_mb`, and `live_heap_delta_mb` to
+  benchmark iteration results.
+- Added corresponding median live/peak heap metrics to benchmark summaries.
+- Retained `heap_delta_mb` as a compatibility alias of `peak_heap_delta_mb`.
+- Clarified that benchmark heap values are R-heap diagnostics rather than
+  operating-system RSS measurements.
+- Kept the public API, BwgTrack schema v2, streaming exact-statistics behavior,
+  zoom behavior, and coordinate conventions unchanged.
+- Added regression coverage for the expanded benchmark memory contract and
+  retained indexed-retrieval signal equivalence tests.
+
+# bwTools 0.7.1
+
+## Benchmark-driven BigWig optimization
+
+- Reworked exact lazy-BigWig statistics so `stats_bwg(use_zoom = FALSE)`
+  streams overlapping binary blocks directly into bin accumulators instead of
+  first materializing a complete full-resolution signal table.
+- Replaced interval-by-interval full-stat binning with vectorized same-bin
+  accumulation and limited loops only for intervals crossing bin boundaries.
+- Split full-data block decoding into a reusable vector decoder so statistics
+  can consume coordinates and values without per-block data.table allocation.
+- Reduced indexed-retrieval allocations by filling growable typed vectors and
+  constructing the returned data.table only once.
+- Added a single-result retrieval fast path to avoid unnecessary `rbindlist()`
+  and re-sorting for the common one-sample, one-region query.
+- Removed an unnecessary full copy of memory-mode signal data before regional
+  filtering.
+- Kept the BwgTrack schema v2, public functions, argument names, zoom semantics,
+  and benchmark result contract unchanged.
+- Added regression coverage requiring streaming exact BigWig statistics to
+  match memory-mode exact statistics for mean, stdev, max, min, coverage, and
+  sum, plus indexed-retrieval equivalence against the bundled bedGraph signal.
+
 # bwTools 0.7.0
 
 ## Large BigWig benchmark framework
