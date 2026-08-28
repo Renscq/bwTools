@@ -1,6 +1,6 @@
 # Author: Rensc
-# Date: 2026-08-28
-# Version: dev004
+# Date: 2026-08-29
+# Version: dev005
 # Function: Retrieve one or more genomic regions from BwgTrack-compatible objects
 # Input: BwgTrack and genomic region(s)
 # Output: In-memory signal data.table or BwgTrack subset
@@ -118,7 +118,7 @@ bw_select_retrieve_samples <- function(x, sample_ids = NULL, strand = NULL) {
 }
 
 bw_retrieve_memory_regions <- function(object, sample_ids, regions) {
-  dt <- data.table::copy(data.table::as.data.table(object$data))
+  dt <- data.table::as.data.table(object$data)
   sample_idx <- which(dt[["sample_id"]] %in% sample_ids)
   dt <- dt[sample_idx]
   if (nrow(dt) < 1L) {
@@ -155,6 +155,9 @@ bw_retrieve_memory_regions <- function(object, sample_ids, regions) {
 
   if (out_n < 1L) {
     return(bw_empty_signal(include_sample = TRUE))
+  }
+  if (out_n == 1L) {
+    return(out[[1L]][])
   }
   ans <- data.table::rbindlist(out[seq_len(out_n)], use.names = TRUE)
   data.table::setorderv(ans, c("sample_id", "chrom", "start", "end"))
@@ -211,6 +214,9 @@ bw_retrieve_lazy_regions <- function(object, sample_tbl, regions) {
 
   if (out_n < 1L) {
     return(bw_empty_signal(include_sample = TRUE))
+  }
+  if (out_n == 1L) {
+    return(out[[1L]][])
   }
   ans <- data.table::rbindlist(out[seq_len(out_n)], use.names = TRUE)
   data.table::setorderv(ans, c("sample_id", "chrom", "start", "end"))

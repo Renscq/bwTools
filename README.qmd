@@ -546,7 +546,12 @@ without `sample_id` is expanded to the object's samples.
 Downstream packages should use this pattern:
 
 ```{r}
-x <- read_bwg(files, sample_ids = sample_ids)
+files <- "E:/rensc/PHD/1404/bigwig/deeptools/KO1.mrna.bigWig"
+sample_ids = "KO1.mrna"
+files <- "E:/rensc/PHD/1404/bigwig/bedtools/mrna3/1404_1.bigwig"
+sample_ids = "1404_1"
+
+x <- read_bwg(files, sample_ids = sample_ids, mode = "memory")
 validate_bwg(x)
 
 sample_meta <- samples_bwg(x)
@@ -560,6 +565,19 @@ signal <- retrieve_bwg(
   end = end,
   sample_ids = sample_ids
 )
+#########################################
+bench <- benchmark_bwg(
+  "E:/rensc/PHD/1404/bigwig/bedtools/mrna3/1404_1.bigwig",
+  sample_id = "1404_1",
+  region_sizes = c(1e4, 1e6, 1e7),
+  n_bins = 1000L,
+  iterations = 3L,
+  warmup = 1L
+)
+
+bench
+bench$summary
+
 ```
 
 Do not depend on private functions such as:

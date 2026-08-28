@@ -130,3 +130,52 @@ test_that("stats_bwg uses zoom levels from native writer for coarse bins", {
   )
   expect_equal(result$value, exact$value, tolerance = 1e-4)
 })
+
+
+test_that("streaming full BigWig statistics match memory-mode exact statistics", {
+  bw_file <- system.file(
+    "extdata", "bwtools_example.bigwig",
+    package = "bwTools", mustWork = TRUE
+  )
+  lazy <- read_bwg(
+    bw_file,
+    format = "bigwig",
+    sample_ids = "example",
+    mode = "lazy"
+  )
+  memory <- read_bwg(
+    bw_file,
+    format = "bigwig",
+    sample_ids = "example",
+    mode = "memory"
+  )
+
+  statistics <- c("mean", "stdev", "max", "min", "coverage", "sum")
+  for (statistic in statistics) {
+    observed <- stats_bwg(
+      lazy,
+      chrom = "chr1",
+      start = 450L,
+      end = 3600L,
+      n_bins = 37L,
+      stat = statistic,
+      use_zoom = FALSE
+    )
+    expected <- stats_bwg(
+      memory,
+      chrom = "chr1",
+      start = 450L,
+      end = 3600L,
+      n_bins = 37L,
+      stat = statistic,
+      use_zoom = FALSE
+    )
+
+    expect_equal(observed$start, expected$start)
+    expect_equal(observed$end, expected$end)
+    expect_equal(observed$covered_bases, expected$covered_bases, tolerance = 1e-8)
+    expect_equal(observed$value, expected$value, tolerance = 1e-8)
+    expect_true(all(observed$source == "full"))
+    expect_true(all(is.na(observed$resolution)))
+  }
+})

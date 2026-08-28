@@ -1,6 +1,6 @@
 # Author: Rensc
-# Date: 2026-08-27
-# Version: dev003
+# Date: 2026-08-29
+# Version: dev004
 # Function: Calculate exact or zoom-accelerated BigWig interval statistics
 # Input: Validated BwgTrack object and genomic bins
 # Output: Per-bin signal statistics in 1-based closed coordinates
@@ -28,26 +28,41 @@ bw_stat_bins <- function(start, end, n_bins) {
   )
 }
 
-bw_finish_stats <- function(bins, covered, sum_data, sum_squared, min_value, max_value, stat, source, resolution) {
+bw_finish_stats <- function(
+  bins,
+  covered,
+  sum_data,
+  sum_squared,
+  min_value,
+  max_value,
+  stat,
+  source,
+  resolution
+) {
   has_data <- covered > 0
-  mean_value <- rep(NA_real_, length(covered))
-  mean_value[has_data] <- sum_data[has_data] / covered[has_data]
-
-  stdev_value <- rep(NA_real_, length(covered))
-  one <- covered == 1
-  many <- covered > 1
-  stdev_value[one] <- 0
-  if (any(many)) {
-    variance <- (sum_squared[many] - (sum_data[many]^2 / covered[many])) / (covered[many] - 1)
-    variance[variance < 0 & abs(variance) < 1e-10] <- 0
-    variance[variance < 0] <- NA_real_
-    stdev_value[many] <- sqrt(variance)
-  }
 
   value <- switch(
     stat,
-    mean = mean_value,
-    stdev = stdev_value,
+    mean = {
+      out <- rep(NA_real_, length(covered))
+      out[has_data] <- sum_data[has_data] / covered[has_data]
+      out
+    },
+    stdev = {
+      out <- rep(NA_real_, length(covered))
+      one <- covered == 1
+      many <- covered > 1
+      out[one] <- 0
+      if (any(many)) {
+        variance <- (
+          sum_squared[many] - (sum_data[many]^2 / covered[many])
+        ) / (covered[many] - 1)
+        variance[variance < 0 & abs(variance) < 1e-10] <- 0
+        variance[variance < 0] <- NA_real_
+        out[many] <- sqrt(variance)
+      }
+      out
+    },
     max = ifelse(has_data, max_value, NA_real_),
     min = ifelse(has_data, min_value, NA_real_),
     coverage = ifelse(has_data, covered / bins$width, NA_real_),
@@ -67,47 +82,211 @@ bw_finish_stats <- function(bins, covered, sum_data, sum_squared, min_value, max
   )
 }
 
+bw_new_stat_state <- function(n) {
+  list(
+    covered = numeric(n),
+    sum_data = numeric(n),
+    sum_squared = numeric(n),
+    min_value = rep(Inf, n),
+    max_value = rep(-Inf, n)
+  )
+}
+
+bw_accumulate_signal_vectors <- function(state, start0, end0, value, bins, stat) {
+  if (length(start0) < 1L) {
+    return(state)
+  }
+
+  start0 <- as.numeric(start0)
+  end0 <- as.numeric(end0)
+  value <- as.numeric(value)
+  keep <- is.finite(start0) & is.finite(end0) & is.finite(value) & end0 > start0
+  if (!any(keep)) {
+    return(state)
+  }
+  start0 <- start0[keep]
+  end0 <- end0[keep]
+  value <- value[keep]
+
+  n <- nrow(bins)
+  first_bin <- findInterval(start0, bins$end0) + 1L
+  last_bin <- findInterval(end0 - 1, bins$end0) + 1L
+  keep <- first_bin >= 1L & first_bin <= n & last_bin >= 1L & last_bin <= n
+  if (!any(keep)) {
+    return(state)
+  }
+  start0 <- start0[keep]
+  end0 <- end0[keep]
+  value <- value[keep]
+  first_bin <- first_bin[keep]
+  last_bin <- last_bin[keep]
+
+  need_sum <- stat %in% c("mean", "stdev", "sum")
+  need_squared <- identical(stat, "stdev")
+  need_min <- identical(stat, "min")
+  need_max <- identical(stat, "max")
+
+  same <- first_bin == last_bin
+  same_idx <- which(same)
+  if (length(same_idx) > 0L) {
+    same_bins <- first_bin[same_idx]
+    touched <- unique(same_bins)
+    for (bin_id in touched) {
+      idx <- same_idx[same_bins == bin_id]
+      width <- end0[idx] - start0[idx]
+      vals <- value[idx]
+      state$covered[bin_id] <- state$covered[bin_id] + sum(width)
+      if (need_sum) {
+        state$sum_data[bin_id] <- state$sum_data[bin_id] + sum(width * vals)
+      }
+      if (need_squared) {
+        state$sum_squared[bin_id] <- state$sum_squared[bin_id] + sum(width * vals^2)
+      }
+      if (need_min) {
+        state$min_value[bin_id] <- min(state$min_value[bin_id], min(vals))
+      }
+      if (need_max) {
+        state$max_value[bin_id] <- max(state$max_value[bin_id], max(vals))
+      }
+    }
+  }
+
+  cross_idx <- which(!same)
+  if (length(cross_idx) > 0L) {
+    for (i in cross_idx) {
+      for (bin_id in seq.int(first_bin[i], last_bin[i])) {
+        segment_start <- max(start0[i], bins$start0[bin_id])
+        segment_end <- min(end0[i], bins$end0[bin_id])
+        width <- segment_end - segment_start
+        if (width <= 0) next
+        state$covered[bin_id] <- state$covered[bin_id] + width
+        if (need_sum) {
+          state$sum_data[bin_id] <- state$sum_data[bin_id] + width * value[i]
+        }
+        if (need_squared) {
+          state$sum_squared[bin_id] <- state$sum_squared[bin_id] + width * value[i]^2
+        }
+        if (need_min) {
+          state$min_value[bin_id] <- min(state$min_value[bin_id], value[i])
+        }
+        if (need_max) {
+          state$max_value[bin_id] <- max(state$max_value[bin_id], value[i])
+        }
+      }
+    }
+  }
+  state
+}
+
 bw_stats_from_signal <- function(signal, chrom, start, end, n_bins, stat) {
   bins <- bw_stat_bins(start, end, n_bins)
-  n <- nrow(bins)
-  covered <- numeric(n)
-  sum_data <- numeric(n)
-  sum_squared <- numeric(n)
-  min_value <- rep(Inf, n)
-  max_value <- rep(-Inf, n)
+  state <- bw_new_stat_state(nrow(bins))
 
   x <- data.table::as.data.table(signal)
   if (nrow(x) > 0L) {
     start0 <- pmax(as.numeric(x$start) - 1, as.numeric(start) - 1)
     end0 <- pmin(as.numeric(x$end), as.numeric(end))
-    value <- as.numeric(x$value)
-    keep <- end0 > start0 & is.finite(value)
-    start0 <- start0[keep]
-    end0 <- end0[keep]
-    value <- value[keep]
+    state <- bw_accumulate_signal_vectors(
+      state = state,
+      start0 = start0,
+      end0 = end0,
+      value = x$value,
+      bins = bins,
+      stat = stat
+    )
+  }
 
-    for (i in seq_along(start0)) {
-      pos <- start0[i]
-      while (pos < end0[i]) {
-        j <- findInterval(pos, bins$end0) + 1L
-        if (j < 1L) j <- 1L
-        if (j > n) break
-        segment_end <- min(end0[i], bins$end0[j])
-        w <- segment_end - pos
-        if (w <= 0) break
-        covered[j] <- covered[j] + w
-        sum_data[j] <- sum_data[j] + w * value[i]
-        sum_squared[j] <- sum_squared[j] + w * value[i]^2
-        min_value[j] <- min(min_value[j], value[i])
-        max_value[j] <- max(max_value[j], value[i])
-        pos <- segment_end
+  out <- bw_finish_stats(
+    bins,
+    state$covered,
+    state$sum_data,
+    state$sum_squared,
+    state$min_value,
+    state$max_value,
+    stat = stat,
+    source = "full",
+    resolution = NA_integer_
+  )
+  data.table::set(out, j = "chrom", value = rep(chrom, nrow(out)))
+  out[]
+}
+
+bw_stats_bigwig_full_stream <- function(
+  file,
+  chrom,
+  start,
+  end,
+  n_bins,
+  stat,
+  metadata = NULL
+) {
+  file <- bw_validate_local_file(file)
+  if (is.null(metadata)) {
+    metadata <- bw_metadata(file)
+  }
+  chrom_idx <- match(chrom, metadata$chromosomes$chrom)
+  if (is.na(chrom_idx)) {
+    bw_stop(paste0("Chromosome `", chrom, "` was not found in the BigWig file."))
+  }
+
+  chrom_length <- as.numeric(metadata$chromosomes$length[chrom_idx])
+  query_start <- as.numeric(start) - 1
+  query_end <- min(as.numeric(end), chrom_length)
+  if (query_start >= query_end) {
+    return(data.table::data.table())
+  }
+
+  start <- as.integer(query_start + 1)
+  end <- as.integer(query_end)
+  bins <- bw_stat_bins(start, end, n_bins)
+  state <- bw_new_stat_state(nrow(bins))
+
+  con <- base::file(file, open = "rb")
+  on.exit(close(con), add = TRUE)
+  index <- bw_read_index_header(con, metadata$header)
+  blocks <- bw_collect_blocks(
+    con = con,
+    node_offset = index$root_offset,
+    endian = metadata$header$endian,
+    tid = metadata$chromosomes$tid[chrom_idx],
+    query_start = query_start,
+    query_end = query_end
+  )
+
+  if (nrow(blocks) > 0L) {
+    for (i in seq_len(nrow(blocks))) {
+      block <- bw_read_exact(con, blocks$offset[i], blocks$size[i])
+      if (metadata$header$uncompress_buf_size > 0) {
+        block <- bw_decompress_block(block)
       }
+      decoded <- bw_decode_block_vectors(
+        block,
+        metadata$header$endian,
+        metadata$chromosomes$tid[chrom_idx],
+        query_start,
+        query_end
+      )
+      state <- bw_accumulate_signal_vectors(
+        state = state,
+        start0 = decoded$start0,
+        end0 = decoded$end0,
+        value = decoded$value,
+        bins = bins,
+        stat = stat
+      )
     }
   }
 
   out <- bw_finish_stats(
-    bins, covered, sum_data, sum_squared, min_value, max_value,
-    stat = stat, source = "full", resolution = NA_integer_
+    bins,
+    state$covered,
+    state$sum_data,
+    state$sum_squared,
+    state$min_value,
+    state$max_value,
+    stat = stat,
+    source = "full",
+    resolution = NA_integer_
   )
   data.table::set(out, j = "chrom", value = rep(chrom, nrow(out)))
   out[]
@@ -180,8 +359,15 @@ bw_stats_bigwig_file <- function(file, sample_id, chrom, start, end, n_bins, sta
       resolution = zoom$level[1L]
     )
   } else {
-    signal <- bw_bigwig_query(file, chrom, start, end)
-    out <- bw_stats_from_signal(signal, chrom, start, end, n_bins, stat)
+    out <- bw_stats_bigwig_full_stream(
+      file = file,
+      chrom = chrom,
+      start = start,
+      end = end,
+      n_bins = n_bins,
+      stat = stat,
+      metadata = metadata
+    )
   }
   data.table::set(out, j = "sample_id", value = rep(sample_id, nrow(out)))
   data.table::setcolorder(
@@ -196,6 +382,8 @@ bw_stats_bigwig_file <- function(file, sample_id, chrom, start, end, n_bins, sta
 #' Calculates coverage-aware statistics over equal-width genomic bins from a
 #' standardized `BwgTrack`. Memory-mode tracks use full-resolution signal.
 #' Lazy BigWig tracks may use stored zoom summaries when `use_zoom = TRUE`.
+#' Exact lazy-BigWig calculations stream overlapping full-resolution blocks
+#' directly into bin accumulators without materializing an interval table.
 #'
 #' @param x A validated `BwgTrack` object.
 #' @param chrom Chromosome name.

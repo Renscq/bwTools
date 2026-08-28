@@ -1,6 +1,6 @@
 # Author: Rensc
-# Date: 2026-08-27
-# Version: dev002
+# Date: 2026-08-29
+# Version: dev003
 # Function: Read local BigWig files using native R binary I/O
 # Input: Local BigWig file paths and genomic intervals
 # Output: Chromosome metadata and 1-based closed signal intervals
@@ -364,7 +364,7 @@ bw_decompress_block <- function(x) {
   )
 }
 
-bw_decode_block <- function(x, endian, tid, query_start, query_end, chrom) {
+bw_decode_block_vectors <- function(x, endian, tid, query_start, query_end) {
   if (length(x) < .BWT_DATA_HEADER_SIZE) {
     bw_stop("Truncated BigWig data block header.")
   }
@@ -375,13 +375,21 @@ bw_decode_block <- function(x, endian, tid, query_start, query_end, chrom) {
   block_type <- bw_u8(x, 20L)
   n_items <- bw_u16(x, 22L, endian)
   if (block_tid != tid || n_items == 0L) {
-    return(bw_empty_signal())
+    return(list(start0 = numeric(), end0 = numeric(), value = numeric()))
   }
-  item_size <- switch(as.character(block_type), "1" = 12L, "2" = 8L, "3" = 4L, bw_stop("Unsupported BigWig data block type."))
+
+  item_size <- switch(
+    as.character(block_type),
+    "1" = 12L,
+    "2" = 8L,
+    "3" = 4L,
+    bw_stop("Unsupported BigWig data block type.")
+  )
   required_size <- .BWT_DATA_HEADER_SIZE + as.numeric(n_items) * item_size
   if (required_size > length(x)) {
     bw_stop("Truncated BigWig data block payload.")
   }
+
   item_offsets <- .BWT_DATA_HEADER_SIZE + seq.int(0, n_items - 1L) * item_size
   if (block_type == 1L) {
     start0 <- bw_u32_vector(x, item_offsets, endian)
@@ -396,20 +404,39 @@ bw_decode_block <- function(x, endian, tid, query_start, query_end, chrom) {
     end0 <- start0 + block_span
     value <- bw_float32_vector(x, item_offsets, endian)
   }
+
   keep <- end0 > query_start & start0 < query_end
   if (!any(keep)) {
+    return(list(start0 = numeric(), end0 = numeric(), value = numeric()))
+  }
+  start0 <- pmax(start0[keep], query_start)
+  end0 <- pmin(end0[keep], query_end)
+  value <- as.numeric(value[keep])
+  valid <- end0 > start0
+  if (!any(valid)) {
+    return(list(start0 = numeric(), end0 = numeric(), value = numeric()))
+  }
+  list(
+    start0 = as.numeric(start0[valid]),
+    end0 = as.numeric(end0[valid]),
+    value = value[valid]
+  )
+}
+
+bw_decode_block <- function(x, endian, tid, query_start, query_end, chrom) {
+  decoded <- bw_decode_block_vectors(
+    x = x,
+    endian = endian,
+    tid = tid,
+    query_start = query_start,
+    query_end = query_end
+  )
+  if (length(decoded$start0) < 1L) {
     return(bw_empty_signal())
   }
-  start1 <- pmax(start0[keep] + 1, query_start + 1)
-  end1 <- pmin(end0[keep], query_end)
-  value <- value[keep]
-  valid <- start1 <= end1
-  start1 <- start1[valid]
-  end1 <- end1[valid]
-  value <- value[valid]
-  if (length(start1) == 0L) {
-    return(bw_empty_signal())
-  }
+
+  start1 <- decoded$start0 + 1
+  end1 <- decoded$end0
   if (any(start1 > .Machine$integer.max) || any(end1 > .Machine$integer.max)) {
     bw_stop("Queried coordinates exceed the supported integer coordinate range.")
   }
@@ -417,7 +444,7 @@ bw_decode_block <- function(x, endian, tid, query_start, query_end, chrom) {
     chrom = rep(chrom, length(start1)),
     start = as.integer(start1),
     end = as.integer(end1),
-    value = as.numeric(value)
+    value = decoded$value
   )
 }
 
@@ -576,30 +603,92 @@ bw_bigwig_query <- function(file, chrom, start, end) {
     return(bw_empty_signal())
   }
 
-  out <- vector("list", nrow(blocks))
-  out_n <- 0L
+  capacity <- max(1024, min(.Machine$integer.max, as.numeric(nrow(blocks)) * 1024))
+  capacity <- as.integer(capacity)
+  start_value <- integer(capacity)
+  end_value <- integer(capacity)
+  signal_value <- numeric(capacity)
+  used <- 0L
+  needs_sort <- FALSE
+  previous_start <- -Inf
+  previous_end <- -Inf
+
   for (i in seq_len(nrow(blocks))) {
     block <- bw_read_exact(con, blocks$offset[i], blocks$size[i])
     if (metadata$header$uncompress_buf_size > 0) {
       block <- bw_decompress_block(block)
     }
-    decoded <- bw_decode_block(
+    decoded <- bw_decode_block_vectors(
       block,
       metadata$header$endian,
       metadata$chromosomes$tid[chrom_idx],
       query_start,
-      query_end,
-      chrom
+      query_end
     )
-    if (nrow(decoded) > 0L) {
-      out_n <- out_n + 1L
-      out[[out_n]] <- decoded
+    n_decoded <- length(decoded$start0)
+    if (n_decoded < 1L) next
+
+    start1 <- decoded$start0 + 1
+    end1 <- decoded$end0
+    if (any(start1 > .Machine$integer.max) || any(end1 > .Machine$integer.max)) {
+      bw_stop("Queried coordinates exceed the supported integer coordinate range.")
     }
+
+    if (n_decoded > 1L) {
+      start_diff <- diff(start1)
+      end_diff <- diff(end1)
+      if (any(start_diff < 0 | (start_diff == 0 & end_diff < 0))) {
+        needs_sort <- TRUE
+      }
+    }
+    if (
+      start1[1L] < previous_start ||
+      (start1[1L] == previous_start && end1[1L] < previous_end)
+    ) {
+      needs_sort <- TRUE
+    }
+    previous_start <- start1[n_decoded]
+    previous_end <- end1[n_decoded]
+
+    needed <- as.numeric(used) + as.numeric(n_decoded)
+    if (needed > .Machine$integer.max) {
+      bw_stop("Queried BigWig interval count exceeds the supported R vector length.")
+    }
+    if (needed > capacity) {
+      new_capacity <- max(needed, ceiling(as.numeric(capacity) * 1.75))
+      if (new_capacity > .Machine$integer.max) {
+        new_capacity <- .Machine$integer.max
+      }
+      capacity <- as.integer(new_capacity)
+      length(start_value) <- capacity
+      length(end_value) <- capacity
+      length(signal_value) <- capacity
+    }
+
+    needed <- as.integer(needed)
+    idx <- seq.int(used + 1L, needed)
+    start_value[idx] <- as.integer(start1)
+    end_value[idx] <- as.integer(end1)
+    signal_value[idx] <- decoded$value
+    used <- needed
   }
-  if (out_n == 0L) {
+
+  if (used < 1L) {
     return(bw_empty_signal())
   }
-  ans <- data.table::rbindlist(out[seq_len(out_n)], use.names = TRUE)
-  data.table::setorderv(ans, c("start", "end"))
+
+  length(start_value) <- used
+  length(end_value) <- used
+  length(signal_value) <- used
+  ans <- data.table::data.table(
+    chrom = rep(chrom, used),
+    start = start_value,
+    end = end_value,
+    value = signal_value
+  )
+  if (isTRUE(needs_sort)) {
+    data.table::setorderv(ans, c("start", "end"))
+  }
   ans[]
 }
+
