@@ -131,41 +131,48 @@ Implementation notes:
   1.0 public API because it duplicated `retrieve_bwg()` and mixed extraction
   with persistence.
 
-## 0.5.x - Merge semantics
+## 0.5.x - Unified merge semantics
 
-Status: **implemented in 0.5.0.**
+Status: **implemented in 0.5.1.**
 
 Scope:
 
-- `merge_bwg()` directly unions signal records without changing values.
-- Same-sample disjoint chromosomes or intervals can be joined into one sample.
-- Different samples remain independent rows in one multi-sample `BwgTrack`.
-- `collapse_bwg()` performs explicit `sum` or `mean` aggregation.
+- `merge_bwg()` is the only public track-combination interface.
+- `method = "auto"` is the default and performs conservative non-arithmetic merging.
+- Different sample IDs remain independent in auto mode even when coordinates overlap.
+- Same-sample disjoint regions are appended without requiring a user-selected mode.
+- Exact duplicates and equal-valued same-sample overlaps are consolidated automatically.
+- Conflicting same-sample overlaps stop with a clear instruction to select `mean` or `sum`.
+- `method = "mean"` and `method = "sum"` perform explicit arithmetic aggregation.
 - Partial overlaps are segmented at all input boundaries before arithmetic.
-- `missing = "zero"` and `missing = "ignore"` define the denominator for means.
-- `groups` supports replicate- and treatment-level aggregation.
+- `missing = "ignore"` is the default mean denominator rule; `missing = "zero"` remains explicit.
+- `groups` supports replicate- and treatment-level arithmetic aggregation.
 - Strand-aware aggregation is separate by default and can be explicitly ignored.
-- Exact duplicates, same-sample overlaps during direct merge, and chromosome-size conflicts are handled explicitly.
-- Merge/collapse return memory-mode `BwgTrack` objects; persistence remains exclusively in `write_bwg()`.
+- Chromosome-size conflicts are errors for all merge methods.
+- Merge always returns a memory-mode `BwgTrack`; persistence remains exclusively in `write_bwg()`.
 
 Acceptance criteria:
 
-- Direct merge never silently averages, sums, or drops values.
-- Same-sample overlaps in `merge_bwg()` fail with a clear instruction to use `collapse_bwg()`.
-- Arithmetic collapse handles both identical and partially overlapping interval boundaries.
+- A normal call to `merge_bwg(a, b, ...)` does not require users to classify inputs as same/different samples or same/different regions.
+- Auto mode never averages or sums signal values.
+- Different samples are never collapsed solely because their coordinates overlap.
+- Same-sample exact duplicates and equal-valued overlaps are resolved without extra user parameters.
+- Conflicting same-sample values cannot be silently resolved.
+- Arithmetic methods handle both identical and partially overlapping interval boundaries.
 - Mean aggregation has explicit uncovered-signal semantics.
-- Grouped aggregation preserves group provenance and produces deterministic output sample IDs.
+- Grouped aggregation preserves group provenance and deterministic output sample IDs.
 - Conflicting chromosome lengths fail before records are combined.
 - Input and output interval counts are recorded in operation metadata.
-- The four core same/different sample and same/different region scenarios are covered by regression tests.
+- `collapse_bwg()` is not exported.
 
 Implementation notes:
 
-- Arithmetic collapse uses a sweep-line event representation over 1-based closed intervals.
+- Auto merging canonicalizes signal independently by sample, chromosome, and strand.
+- Arithmetic aggregation uses a sweep-line event representation over 1-based closed intervals.
 - Atomic segments are emitted only while at least one input member is active.
-- `drop_zero = TRUE` preserves sparse-track behavior, while all-zero results remain valid empty `BwgTrack` objects.
-- `merge_adjacent = TRUE` joins adjacent equal-valued segments after aggregation.
-- Weighted aggregation and additional arithmetic methods can be added later without changing the merge/collapse responsibility boundary.
+- `drop_zero = TRUE` affects arithmetic methods only; auto mode preserves input zero-valued signal.
+- `merge_adjacent = TRUE` joins adjacent equal-valued segments after auto or arithmetic merging.
+- Weighted aggregation and additional arithmetic methods can be added later without adding another public merge function.
 
 ## 0.6.x - GeneTrackR integration
 

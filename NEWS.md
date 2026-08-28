@@ -1,3 +1,13 @@
+# bwTools 0.5.1
+
+- Unified direct merging and arithmetic aggregation under the single public `merge_bwg()` interface.
+- Added conservative `method = "auto"` as the default so users do not need to classify sample identity or regional overlap before merging.
+- Auto mode preserves different samples, appends disjoint same-sample regions, automatically consolidates exact duplicates and equal-valued overlaps, and rejects only conflicting same-sample overlaps.
+- Moved `mean` and `sum` aggregation into `merge_bwg()` and removed `collapse_bwg()` from the public API.
+- Changed the default mean rule to `missing = "ignore"`; `missing = "zero"` remains available when uncovered members should explicitly contribute zero.
+- Preserved grouped replicate/treatment aggregation, strand-aware arithmetic, chromosome-length validation, sparse zero handling, provenance metadata, and writer separation.
+- Updated README validation and regression tests around the simplified automatic merge workflow.
+
 # bwTools 0.5.0
 
 - Added `merge_bwg()` for direct union of same- or different-sample signal tracks without changing values.

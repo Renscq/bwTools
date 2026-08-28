@@ -2,23 +2,63 @@
 % Please edit documentation in R/merge-bwg.R
 \name{merge_bwg}
 \alias{merge_bwg}
-\title{Directly merge genomic signal tracks}
+\title{Merge genomic signal tracks}
 \usage{
-merge_bwg(..., tracks = NULL, duplicates = c("error", "drop"))
+merge_bwg(
+  ...,
+  tracks = NULL,
+  method = c("auto", "mean", "sum"),
+  groups = NULL,
+  missing = c("ignore", "zero"),
+  strand = c("separate", "ignore"),
+  drop_zero = TRUE,
+  merge_adjacent = TRUE
+)
 }
 \arguments{
 \item{...}{Two or more \code{BwgTrack}-compatible objects.}
 
-\item{tracks}{Optional list of \code{BwgTrack}-compatible objects. Use either \code{...} or \code{tracks}.}
+\item{tracks}{Optional list of \code{BwgTrack}-compatible objects. Use either
+\code{...} or \code{tracks}.}
 
-\item{duplicates}{How exact duplicate signal records should be handled: \code{error} rejects them; \code{drop} removes exact duplicates before overlap validation.}
+\item{method}{Merge strategy. \code{auto} performs conservative, non-arithmetic
+merging; \code{mean} and \code{sum} perform explicit arithmetic aggregation.}
+
+\item{groups}{Optional named character vector or table with \code{sample_id} and
+\code{group_id} columns. Used only for arithmetic methods.}
+
+\item{missing}{Mean denominator rule. \code{ignore} averages only members covering
+an atomic segment; \code{zero} treats uncovered members as zero. Ignored for
+\code{auto} and \code{sum}.}
+
+\item{strand}{Strand handling rule. \code{separate} keeps \code{+}, \code{-}, and \code{*}
+signals separate; \code{ignore} combines strands.}
+
+\item{drop_zero}{Whether zero-valued arithmetic output segments should be
+omitted. Ignored for \code{method = "auto"}.}
+
+\item{merge_adjacent}{Whether directly adjacent equal-valued output segments
+should be merged.}
 }
 \value{
-A memory-mode \code{BwgTrack} containing the direct union of input tracks.
+A memory-mode \code{BwgTrack} containing merged signal.
 }
 \description{
-Combines records from two or more \code{BwgTrack} objects without changing signal values. Records from different samples may occupy the same genomic region. Records assigned to the same sample must remain non-overlapping after the merge; use \code{collapse_bwg()} when overlapping values require arithmetic aggregation.
-}
-\details{
-Lazy BigWig inputs are materialized by indexed chromosome retrieval because the returned object is a memory-mode \code{BwgTrack}.
+Combines two or more \code{BwgTrack} objects through one user-facing interface.
+The default \code{method = "auto"} preserves sample identities and signal values
+without requiring users to determine whether inputs contain the same samples
+or overlapping genomic regions.
+
+In auto mode, different samples remain separate, disjoint regions from the
+same sample are appended, exact duplicates and equal-valued overlaps are
+consolidated automatically, and conflicting overlaps from the same sample
+stop with an instruction to choose \code{method = "mean"} or \code{method = "sum"}.
+
+Arithmetic methods split partial overlaps at every input boundary. Without
+\code{groups}, one unique sample ID is preserved, while multiple sample IDs are
+aggregated into a new sample named \code{merged}. Use \code{groups} to aggregate
+replicates or treatments into explicit output groups.
+
+File persistence is intentionally excluded. Save the returned \code{BwgTrack}
+explicitly with \code{write_bwg()}.
 }

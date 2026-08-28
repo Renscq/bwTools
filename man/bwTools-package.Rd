@@ -10,4 +10,8 @@ Native R tools for reading, writing, and manipulating BigWig, WIG, and bedGraph
 signal tracks. In-memory objects follow the \code{BwgTrack} contract used by
 GeneTrackR and use 1-based closed coordinates.
 }
+\author{
+\strong{Maintainer}: Rensc \email{rensc0718@163.com}
+
+}
 \keyword{internal}

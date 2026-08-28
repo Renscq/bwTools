@@ -40,9 +40,19 @@ make_merge_track <- function(
   bw_track(samples, signal, seqinfo = seqinfo, meta = list(mode = "memory"))
 }
 
-test_that("same-sample disjoint regions merge directly", {
-  a <- make_merge_track("sampleA", "chr1", c(1L, 20L), c(10L, 30L), c(1, 2), chrom_length = 100L)
-  b <- make_merge_track("sampleA", "chr2", c(5L, 40L), c(15L, 50L), c(3, 4), chrom_length = 80L)
+test_that("auto is the default merge strategy", {
+  expect_identical(eval(formals(merge_bwg)$method), c("auto", "mean", "sum"))
+})
+
+test_that("auto appends disjoint regions from the same sample", {
+  a <- make_merge_track(
+    "sampleA", "chr1", c(1L, 20L), c(10L, 30L), c(1, 2),
+    chrom_length = 100L
+  )
+  b <- make_merge_track(
+    "sampleA", "chr2", c(5L, 40L), c(15L, 50L), c(3, 4),
+    chrom_length = 80L
+  )
 
   observed <- merge_bwg(a, b)
 
@@ -51,41 +61,12 @@ test_that("same-sample disjoint regions merge directly", {
   expect_equal(nrow(observed$data), 4L)
   expect_equal(observed$data$chrom, c("chr1", "chr1", "chr2", "chr2"))
   expect_equal(observed$meta$operation, "merge")
-  expect_equal(observed$meta$input_intervals, 4L)
-  expect_equal(observed$meta$output_intervals, 4L)
+  expect_equal(observed$meta$method, "auto")
 })
 
-test_that("same-sample overlapping regions collapse by sum or mean", {
+test_that("auto preserves different samples even when coordinates overlap", {
   a <- make_merge_track("sampleA", "chr1", 1L, 10L, 2, chrom_length = 100L)
-  b <- make_merge_track("sampleA", "chr1", 6L, 15L, 4, chrom_length = 100L)
-
-  summed <- collapse_bwg(a, b, method = "sum", by = "sample")
-  expect_equal(summed$data$start, c(1L, 6L, 11L))
-  expect_equal(summed$data$end, c(5L, 10L, 15L))
-  expect_equal(summed$data$value, c(2, 6, 4))
-
-  mean_zero <- collapse_bwg(
-    a,
-    b,
-    method = "mean",
-    by = "sample",
-    missing = "zero"
-  )
-  expect_equal(mean_zero$data$value, c(1, 3, 2))
-
-  mean_ignore <- collapse_bwg(
-    a,
-    b,
-    method = "mean",
-    by = "sample",
-    missing = "ignore"
-  )
-  expect_equal(mean_ignore$data$value, c(2, 3, 4))
-})
-
-test_that("different samples with independent regions merge without arithmetic", {
-  a <- make_merge_track("sampleA", "chr1", 1L, 10L, 2, chrom_length = 100L)
-  b <- make_merge_track("sampleB", "chr2", 20L, 30L, 4, chrom_length = 80L)
+  b <- make_merge_track("sampleB", "chr1", 1L, 10L, 4, chrom_length = 100L)
 
   observed <- merge_bwg(a, b)
 
@@ -94,32 +75,61 @@ test_that("different samples with independent regions merge without arithmetic",
   expect_equal(observed$data$value, c(2, 4))
 })
 
-test_that("different samples can collapse into one output sample", {
+test_that("auto deduplicates and joins equal-valued overlaps", {
+  a <- make_merge_track("sampleA", "chr1", 1L, 10L, 2, chrom_length = 100L)
+  duplicate <- make_merge_track("sampleA", "chr1", 1L, 10L, 2, chrom_length = 100L)
+  overlap <- make_merge_track("sampleA", "chr1", 6L, 15L, 2, chrom_length = 100L)
+
+  observed <- merge_bwg(a, duplicate, overlap)
+
+  expect_equal(nrow(observed$data), 1L)
+  expect_equal(observed$data$start, 1L)
+  expect_equal(observed$data$end, 15L)
+  expect_equal(observed$data$value, 2)
+})
+
+test_that("auto rejects conflicting same-sample overlaps", {
+  a <- make_merge_track("sampleA", "chr1", 1L, 10L, 2, chrom_length = 100L)
+  b <- make_merge_track("sampleA", "chr1", 6L, 15L, 4, chrom_length = 100L)
+
+  expect_error(
+    merge_bwg(a, b),
+    "method = 'mean'.*method = 'sum'"
+  )
+})
+
+test_that("sum and mean resolve same-sample overlaps", {
+  a <- make_merge_track("sampleA", "chr1", 1L, 10L, 2, chrom_length = 100L)
+  b <- make_merge_track("sampleA", "chr1", 6L, 15L, 4, chrom_length = 100L)
+
+  summed <- merge_bwg(a, b, method = "sum")
+  expect_equal(summed$samples$sample_id, "sampleA")
+  expect_equal(summed$data$start, c(1L, 6L, 11L))
+  expect_equal(summed$data$end, c(5L, 10L, 15L))
+  expect_equal(summed$data$value, c(2, 6, 4))
+
+  mean_ignore <- merge_bwg(a, b, method = "mean")
+  expect_equal(mean_ignore$data$value, c(2, 3, 4))
+
+  mean_zero <- merge_bwg(a, b, method = "mean", missing = "zero")
+  expect_equal(mean_zero$data$value, c(1, 3, 2))
+})
+
+test_that("arithmetic merge combines different samples automatically", {
   a <- make_merge_track("sampleA", "chr1", 1L, 10L, 2, chrom_length = 100L)
   b <- make_merge_track("sampleB", "chr1", 1L, 10L, 4, chrom_length = 100L)
 
-  summed <- collapse_bwg(
-    a,
-    b,
-    method = "sum",
-    by = "all",
-    output_sample = "combined"
-  )
-  expect_equal(summed$samples$sample_id, "combined")
-  expect_equal(summed$data$value, 6)
-
-  averaged <- collapse_bwg(
-    a,
-    b,
-    method = "mean",
-    by = "all",
-    output_sample = "combined",
-    missing = "zero"
-  )
+  averaged <- merge_bwg(a, b, method = "mean")
+  expect_equal(averaged$samples$sample_id, "merged")
   expect_equal(averaged$data$value, 3)
+  expect_equal(averaged$meta$grouping, "all")
+
+  summed <- merge_bwg(a, b, method = "sum")
+  expect_equal(summed$samples$sample_id, "merged")
+  expect_equal(summed$data$value, 6)
 })
 
-test_that("explicit groups support replicate-level aggregation", {
+test_that("groups support replicate-level arithmetic merging", {
   a <- make_merge_track("A1", "chr1", 1L, 10L, 2, chrom_length = 100L)
   b <- make_merge_track("A2", "chr1", 1L, 10L, 4, chrom_length = 100L)
   c <- make_merge_track("B1", "chr1", 1L, 10L, 10, chrom_length = 100L)
@@ -128,92 +138,90 @@ test_that("explicit groups support replicate-level aggregation", {
     group_id = c("groupA", "groupA", "groupB")
   )
 
-  observed <- collapse_bwg(
+  observed <- merge_bwg(
     a,
     b,
     c,
     method = "mean",
-    groups = groups,
-    missing = "zero"
+    groups = groups
   )
 
   expect_equal(observed$samples$sample_id, c("groupA", "groupB"))
   expect_equal(observed$data$value, c(3, 10))
 })
 
-test_that("direct merge rejects overlaps and handles duplicates explicitly", {
+test_that("groups are rejected in auto mode", {
   a <- make_merge_track("sampleA", "chr1", 1L, 10L, 2, chrom_length = 100L)
-  b <- make_merge_track("sampleA", "chr1", 6L, 15L, 4, chrom_length = 100L)
-  expect_error(
-    merge_bwg(a, b),
-    "Use `collapse_bwg\\(\\)`"
-  )
+  b <- make_merge_track("sampleB", "chr1", 1L, 10L, 4, chrom_length = 100L)
 
-  duplicate <- make_merge_track("sampleA", "chr1", 1L, 10L, 2, chrom_length = 100L)
-  expect_error(merge_bwg(a, duplicate), "Exact duplicate")
-  dropped <- merge_bwg(a, duplicate, duplicates = "drop")
-  expect_equal(nrow(dropped$data), 1L)
+  expect_error(
+    merge_bwg(
+      a,
+      b,
+      groups = c(sampleA = "group", sampleB = "group")
+    ),
+    "can only be used"
+  )
 })
 
-test_that("chromosome length conflicts are rejected", {
+test_that("chromosome length conflicts are rejected for every method", {
   a <- make_merge_track("sampleA", "chr1", 1L, 10L, 2, chrom_length = 100L)
   b <- make_merge_track("sampleA", "chr1", 20L, 30L, 4, chrom_length = 200L)
   expect_error(merge_bwg(a, b), "Conflicting chromosome lengths")
 
   c <- make_merge_track("sampleB", "chr1", 1L, 10L, 4, chrom_length = 200L)
   expect_error(
-    collapse_bwg(a, c, method = "sum", by = "all"),
+    merge_bwg(a, c, method = "sum"),
     "Conflicting chromosome lengths"
   )
 })
 
 test_that("strand separation prevents cross-strand arithmetic by default", {
-  plus <- make_merge_track("plus", "chr1", 1L, 10L, 2, strand = "+", chrom_length = 100L)
-  minus <- make_merge_track("minus", "chr1", 1L, 10L, 4, strand = "-", chrom_length = 100L)
-
-  separated <- collapse_bwg(
-    plus,
-    minus,
-    method = "sum",
-    by = "all",
-    output_sample = "combined"
+  plus <- make_merge_track(
+    "plus", "chr1", 1L, 10L, 2,
+    strand = "+", chrom_length = 100L
   )
-  expect_setequal(separated$samples$sample_id, c("combined_plus", "combined_minus"))
-  plus_idx <- which(separated$data$sample_id == "combined_plus")
-  minus_idx <- which(separated$data$sample_id == "combined_minus")
-  expect_equal(separated$data$value[plus_idx], 2)
-  expect_equal(separated$data$value[minus_idx], 4)
+  minus <- make_merge_track(
+    "minus", "chr1", 1L, 10L, 4,
+    strand = "-", chrom_length = 100L
+  )
 
-  ignored <- collapse_bwg(
+  separated <- merge_bwg(
+    plus,
+    minus,
+    method = "sum"
+  )
+  expect_setequal(
+    separated$samples$sample_id,
+    c("merged_plus", "merged_minus")
+  )
+
+  ignored <- merge_bwg(
     plus,
     minus,
     method = "sum",
-    by = "all",
-    output_sample = "combined",
     strand = "ignore"
   )
-  expect_equal(ignored$samples$sample_id, "combined")
+  expect_equal(ignored$samples$sample_id, "merged")
   expect_equal(ignored$data$value, 6)
 })
 
-test_that("all-zero collapsed signal remains a valid empty track", {
+test_that("all-zero arithmetic signal remains a valid empty track", {
   a <- make_merge_track("sampleA", "chr1", 1L, 10L, 2, chrom_length = 100L)
   b <- make_merge_track("sampleB", "chr1", 1L, 10L, -2, chrom_length = 100L)
 
-  observed <- collapse_bwg(
+  observed <- merge_bwg(
     a,
     b,
     method = "sum",
-    by = "all",
-    output_sample = "combined",
     drop_zero = TRUE
   )
   expect_s3_class(observed, "BwgTrack")
-  expect_equal(observed$samples$sample_id, "combined")
+  expect_equal(observed$samples$sample_id, "merged")
   expect_equal(nrow(observed$data), 0L)
 })
 
-test_that("mean zero counts group members without covered intervals", {
+test_that("mean zero counts members without covered intervals", {
   a <- make_merge_track("sampleA", "chr1", 1L, 10L, 2, chrom_length = 100L)
   empty_samples <- data.table::data.table(
     sample_id = "sampleB",
@@ -241,20 +249,16 @@ test_that("mean zero counts group members without covered intervals", {
     meta = list(mode = "memory")
   )
 
-  zero_mean <- collapse_bwg(
+  zero_mean <- merge_bwg(
     a,
     b,
     method = "mean",
-    by = "all",
-    output_sample = "combined",
     missing = "zero"
   )
-  ignore_mean <- collapse_bwg(
+  ignore_mean <- merge_bwg(
     a,
     b,
     method = "mean",
-    by = "all",
-    output_sample = "combined",
     missing = "ignore"
   )
 
@@ -262,7 +266,7 @@ test_that("mean zero counts group members without covered intervals", {
   expect_equal(ignore_mean$data$value, 2)
 })
 
-test_that("merge and collapse expose no persistence controls", {
+test_that("merge exposes no persistence controls", {
   persistence_args <- c(
     "outdir",
     "format",
@@ -272,5 +276,8 @@ test_that("merge and collapse expose no persistence controls", {
     "max_zoom_levels"
   )
   expect_length(intersect(names(formals(merge_bwg)), persistence_args), 0L)
-  expect_length(intersect(names(formals(collapse_bwg)), persistence_args), 0L)
+})
+
+test_that("collapse_bwg is not part of the public API", {
+  expect_false("collapse_bwg" %in% getNamespaceExports("bwTools"))
 })

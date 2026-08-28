@@ -7,7 +7,7 @@ execute:
   enabled: false
 ---
 
-Current development release: **0.5.0**
+Current development release: **0.5.1**
 
 `bwTools` provides native-R I/O and indexed analysis for BigWig, WIG, and
 bedGraph genomic signal tracks. It is designed as the signal backend for
@@ -612,35 +612,49 @@ This separation keeps responsibilities explicit:
 ```{text}
 read_bwg()      open/load tracks
 retrieve_bwg()  extract genomic regions
-merge_bwg()     directly union non-overlapping records
-collapse_bwg()  aggregate overlapping signal values
+merge_bwg()     merge or explicitly aggregate tracks
 stats_bwg()     calculate interval statistics
 write_bwg()     persist or convert tracks
 ```
 
+## Merge signal tracks
 
-## Merge and collapse signal tracks
+`merge_bwg()` is the single public interface for combining signal tracks.
+Users do not need to determine in advance whether inputs contain the same
+sample IDs or whether genomic regions overlap.
 
-`bwTools` separates direct record union from arithmetic signal aggregation:
+The default is:
 
 ```{text}
-merge_bwg()     combine records without changing values
-collapse_bwg()  calculate sum or mean on overlapping signal
+merged <- merge_bwg(track1, track2, track3)
 ```
 
-This distinction covers four common workflows:
+which is equivalent to:
 
-| Input relationship | Operation | Function |
-| --- | --- | --- |
-| Same sample, different chromosomes or disjoint regions | direct union | `merge_bwg()` |
-| Same sample, overlapping regions | sum or mean | `collapse_bwg(by = "sample")` |
-| Different samples, different chromosomes or regions | multi-sample union | `merge_bwg()` |
-| Different samples, overlapping regions | sum or mean | `collapse_bwg(by = "all")` or `groups` |
+```{text}
+merged <- merge_bwg(
+  track1,
+  track2,
+  track3,
+  method = "auto"
+)
+```
 
-Direct merging never changes signal values. Arithmetic collapse never writes
-files; persist the returned `BwgTrack` explicitly with `write_bwg()`.
+`method = "auto"` is deliberately conservative:
 
-### 17. Same sample, disjoint regions
+| Input relationship | Automatic behavior |
+| --- | --- |
+| Different samples | preserve samples independently |
+| Same sample, disjoint regions | append records |
+| Exact duplicate records | deduplicate automatically |
+| Same sample, equal-valued overlaps | merge overlapping signal |
+| Same sample, conflicting overlap values | stop and request `mean` or `sum` |
+
+Arithmetic aggregation is therefore never guessed from coordinates alone.
+Users only choose `method = "mean"` or `method = "sum"` when changing signal
+values is intentional.
+
+### 17. Same sample, different regions
 
 ```{r}
 merge_a <- bw_track(
@@ -695,6 +709,7 @@ same_sample_merged <- merge_bwg(
 )
 
 stopifnot(
+  same_sample_merged$meta$method == "auto",
   nrow(same_sample_merged$samples) == 1L,
   same_sample_merged$samples$sample_id == "sampleA",
   nrow(same_sample_merged$data) == 4L,
@@ -705,11 +720,14 @@ stopifnot(
 )
 ```
 
-If the same sample contains overlapping intervals, direct merge fails rather
-than silently choosing or averaging one value:
+No method selection was required because the regions are compatible.
+
+### 18. Equal-valued overlaps are resolved automatically
+
+Exact duplicates and same-valued overlaps do not require another option.
 
 ```{r}
-overlap_a <- bw_track(
+equal_overlap_a <- bw_track(
   samples = merge_a$samples,
   data = data.frame(
     sample_id = "sampleA",
@@ -723,7 +741,61 @@ overlap_a <- bw_track(
   meta = list(mode = "memory")
 )
 
-overlap_b <- bw_track(
+equal_overlap_b <- bw_track(
+  samples = merge_a$samples,
+  data = data.frame(
+    sample_id = "sampleA",
+    chrom = "chr1",
+    start = 6L,
+    end = 15L,
+    value = 2,
+    strand = "*"
+  ),
+  seqinfo = merge_a$seqinfo,
+  meta = list(mode = "memory")
+)
+
+equal_overlap_merged <- merge_bwg(
+  equal_overlap_a,
+  equal_overlap_b
+)
+
+stopifnot(
+  nrow(equal_overlap_merged$data) == 1L,
+  equal_overlap_merged$data$start == 1L,
+  equal_overlap_merged$data$end == 15L,
+  equal_overlap_merged$data$value == 2
+)
+```
+
+### 19. Conflicting overlaps require an explicit method
+
+Consider two inputs from the same sample:
+
+```{text}
+source 1: chr1 1-10  value=2
+source 2: chr1 6-15  value=4
+```
+
+The overlap contains incompatible values. The default merge stops rather than
+silently selecting, averaging, or adding them.
+
+```{r}
+conflict_a <- bw_track(
+  samples = merge_a$samples,
+  data = data.frame(
+    sample_id = "sampleA",
+    chrom = "chr1",
+    start = 1L,
+    end = 10L,
+    value = 2,
+    strand = "*"
+  ),
+  seqinfo = merge_a$seqinfo,
+  meta = list(mode = "memory")
+)
+
+conflict_b <- bw_track(
   samples = merge_a$samples,
   data = data.frame(
     sample_id = "sampleA",
@@ -739,128 +811,72 @@ overlap_b <- bw_track(
 
 stopifnot(
   inherits(
-    try(merge_bwg(overlap_a, overlap_b), silent = TRUE),
+    try(merge_bwg(conflict_a, conflict_b), silent = TRUE),
     "try-error"
   )
 )
 ```
 
-### 18. Same sample, overlapping signal
-
-Partial overlaps are split at all input boundaries before aggregation. For:
-
-```{text}
-source 1: chr1 1-10  value=2
-source 2: chr1 6-15  value=4
-```
-
-`sum` produces `1-5 = 2`, `6-10 = 6`, and `11-15 = 4`.
+If addition is biologically intended:
 
 ```{r}
-same_sample_sum <- collapse_bwg(
-  overlap_a,
-  overlap_b,
-  method = "sum",
-  by = "sample"
+conflict_sum <- merge_bwg(
+  conflict_a,
+  conflict_b,
+  method = "sum"
 )
 
 stopifnot(
-  identical(same_sample_sum$data$start, c(1L, 6L, 11L)),
-  identical(same_sample_sum$data$end, c(5L, 10L, 15L)),
-  isTRUE(all.equal(same_sample_sum$data$value, c(2, 6, 4)))
+  identical(conflict_sum$data$start, c(1L, 6L, 11L)),
+  identical(conflict_sum$data$end, c(5L, 10L, 15L)),
+  isTRUE(all.equal(conflict_sum$data$value, c(2, 6, 4)))
 )
 ```
 
-For a mean, uncovered members require an explicit interpretation. With
-`missing = "zero"`, uncovered members contribute zero:
+If averaging is intended, the default `missing = "ignore"` averages only
+members that cover each atomic segment:
 
 ```{r}
-same_sample_mean_zero <- collapse_bwg(
-  overlap_a,
-  overlap_b,
-  method = "mean",
-  by = "sample",
-  missing = "zero"
+conflict_mean <- merge_bwg(
+  conflict_a,
+  conflict_b,
+  method = "mean"
 )
 
 stopifnot(
   isTRUE(
     all.equal(
-      same_sample_mean_zero$data$value,
-      c(1, 3, 2)
-    )
-  )
-)
-```
-
-With `missing = "ignore"`, only members covering the atomic segment enter the
-denominator:
-
-```{r}
-same_sample_mean_ignore <- collapse_bwg(
-  overlap_a,
-  overlap_b,
-  method = "mean",
-  by = "sample",
-  missing = "ignore"
-)
-
-stopifnot(
-  isTRUE(
-    all.equal(
-      same_sample_mean_ignore$data$value,
+      conflict_mean$data$value,
       c(2, 3, 4)
     )
   )
 )
 ```
 
-### 19. Different samples, direct multi-sample merge
-
-Different sample IDs remain independent even when they occupy the same genomic
-coordinate system.
+Use `missing = "zero"` only when uncovered members should contribute zero:
 
 ```{r}
-sample_b <- bw_track(
-  samples = data.frame(
-    sample_id = "sampleB",
-    file = NA_character_,
-    format = "memory",
-    strand = "*"
-  ),
-  data = data.frame(
-    sample_id = "sampleB",
-    chrom = "chr2",
-    start = 1000L,
-    end = 1099L,
-    value = 8,
-    strand = "*"
-  ),
-  seqinfo = data.frame(
-    sample_id = "sampleB",
-    chrom = "chr2",
-    length = 8000L
-  ),
-  meta = list(mode = "memory")
-)
-
-multi_sample <- merge_bwg(
-  merge_a,
-  sample_b
+conflict_mean_zero <- merge_bwg(
+  conflict_a,
+  conflict_b,
+  method = "mean",
+  missing = "zero"
 )
 
 stopifnot(
-  identical(
-    multi_sample$samples$sample_id,
-    c("sampleA", "sampleB")
-  ),
-  nrow(multi_sample$data) == 3L
+  isTRUE(
+    all.equal(
+      conflict_mean_zero$data$value,
+      c(1, 3, 2)
+    )
+  )
 )
 ```
 
-### 20. Different samples, arithmetic collapse
+### 20. Different samples are preserved automatically
 
-Different samples can be collapsed into one new output sample:
+Different sample IDs remain independent in auto mode even when their genomic
+coordinates overlap.
 
 ```{r}
 sample_a_signal <- bw_track(
@@ -909,25 +925,56 @@ sample_b_signal <- bw_track(
   meta = list(mode = "memory")
 )
 
-combined_mean <- collapse_bwg(
+multi_sample <- merge_bwg(
   sample_a_signal,
-  sample_b_signal,
-  method = "mean",
-  by = "all",
-  output_sample = "combined",
-  missing = "zero"
+  sample_b_signal
 )
 
 stopifnot(
-  combined_mean$samples$sample_id == "combined",
+  identical(
+    multi_sample$samples$sample_id,
+    c("sampleA", "sampleB")
+  ),
+  nrow(multi_sample$data) == 2L
+)
+```
+
+Coordinates alone therefore never cause different samples to be averaged.
+
+### 21. Explicitly aggregate different samples
+
+When `mean` or `sum` is selected and several sample IDs are present, they are
+combined into an output sample named `merged` unless `groups` is supplied.
+
+```{r}
+combined_mean <- merge_bwg(
+  sample_a_signal,
+  sample_b_signal,
+  method = "mean"
+)
+
+stopifnot(
+  combined_mean$samples$sample_id == "merged",
   combined_mean$data$value == 3
 )
 ```
 
-### 21. Grouped replicate aggregation
+```{r}
+combined_sum <- merge_bwg(
+  sample_a_signal,
+  sample_b_signal,
+  method = "sum"
+)
 
-Use `groups` when samples should be collapsed within biological groups rather
-than all together:
+stopifnot(
+  combined_sum$samples$sample_id == "merged",
+  combined_sum$data$value == 6
+)
+```
+
+### 22. Group replicate samples
+
+Use `groups` when arithmetic merging should occur within biological groups.
 
 ```{r}
 groups <- data.frame(
@@ -935,12 +982,11 @@ groups <- data.frame(
   group_id = c("treatment", "treatment")
 )
 
-group_mean <- collapse_bwg(
+group_mean <- merge_bwg(
   sample_a_signal,
   sample_b_signal,
   method = "mean",
-  groups = groups,
-  missing = "zero"
+  groups = groups
 )
 
 stopifnot(
@@ -952,15 +998,14 @@ stopifnot(
 A named character vector is also accepted:
 
 ```{r}
-group_mean_named <- collapse_bwg(
+group_mean_named <- merge_bwg(
   sample_a_signal,
   sample_b_signal,
   method = "mean",
   groups = c(
     sampleA = "treatment",
     sampleB = "treatment"
-  ),
-  missing = "zero"
+  )
 )
 
 stopifnot(
@@ -968,27 +1013,29 @@ stopifnot(
 )
 ```
 
-### Merge and collapse rules
+### Merge rules
 
-- `merge_bwg()` never performs arithmetic.
-- Exact duplicate records are rejected by default. Use
-  `duplicates = "drop"` only when duplicate removal is intentional.
-- Same-sample overlaps are rejected by `merge_bwg()` and must be resolved with
-  `collapse_bwg()`.
-- `collapse_bwg()` currently implements `sum` and `mean` only.
-- Mean aggregation distinguishes uncovered signal as zero or missing through
-  `missing`.
-- `strand = "separate"` is the default; opposite strands are not added or
-  averaged unless `strand = "ignore"` is explicit.
+- `method = "auto"` is the default and does not perform arithmetic.
+- Different sample IDs remain independent in auto mode regardless of coordinate
+  overlap.
+- Same-sample disjoint regions are appended automatically.
+- Exact duplicates and equal-valued same-sample overlaps are consolidated
+  automatically.
+- Conflicting same-sample overlaps require explicit `method = "mean"` or
+  `method = "sum"`.
+- `missing = "ignore"` is the default for means; use `missing = "zero"` only
+  when uncovered members should count as zero.
+- `groups` is used only with arithmetic methods.
+- `strand = "separate"` is the default; opposite strands are not aggregated
+  unless `strand = "ignore"` is explicit.
 - Chromosome-length conflicts are errors rather than being silently resolved.
-- Adjacent equal-valued collapsed segments are merged by default to keep sparse
-  tracks compact.
-- Zero-valued collapsed segments are omitted by default through
-  `drop_zero = TRUE`.
-- Both functions return memory-mode `BwgTrack` objects. File output remains the
+- Adjacent equal-valued output segments are merged by default.
+- Zero-valued arithmetic segments are omitted by default through
+  `drop_zero = TRUE`; auto mode preserves zero-valued input signal.
+- `merge_bwg()` always returns a memory-mode `BwgTrack`. File output remains the
   responsibility of `write_bwg()`.
 
-Persist a merged or collapsed result explicitly:
+Persist a merged result explicitly:
 
 ```{r}
 merge_output_dir <- file.path(
@@ -1058,7 +1105,7 @@ should be treated as a regression before continuing development.
 - **0.2.x**: native BigWig/WIG/bedGraph writer — implemented.
 - **0.3.x**: BigWig zoom levels and interval statistics — implemented.
 - **0.4.x**: unified indexed single-/multi-region retrieval — implemented.
-- **0.5.x**: direct multi-track merge and arithmetic collapse — current stage.
+- **0.5.x**: unified automatic merge and explicit arithmetic aggregation — current stage.
 - **0.6.x**: GeneTrackR backend integration.
 - **1.0.0**: stable API and cross-platform release.
 

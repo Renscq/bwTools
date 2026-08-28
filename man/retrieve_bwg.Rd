@@ -28,12 +28,16 @@ retrieve_bwg(
 
 \item{strand}{Optional strand selector: \code{+}, \code{-}, \code{*}, \code{both}, or \code{ignore}.}
 
-\item{regions}{Optional data.frame or data.table containing \code{chrom}, \code{start}, and \code{end} columns. Use either \code{regions} or \code{chrom}/\code{start}/\code{end}.}
+\item{regions}{Optional data.frame or data.table containing \code{chrom}, \code{start},
+and \code{end} columns. Use either \code{regions} or \code{chrom}/\code{start}/\code{end}.}
 
-\item{result}{Result type: \code{data} returns the in-memory signal data.table; \code{track} returns a memory-mode \code{BwgTrack} containing the selected samples, signal, and chromosome metadata.}
+\item{result}{Result type: \code{data} returns the in-memory signal data.table;
+\code{track} returns a memory-mode \code{BwgTrack} containing the selected samples,
+signal, and chromosome metadata.}
 }
 \value{
-A signal data.table or a memory-mode \code{BwgTrack}, depending on \code{result}.
+A signal data.table or a memory-mode \code{BwgTrack}, depending on
+\code{result}.
 }
 \description{
 Retrieves one or more genomic regions from a \code{BwgTrack}-compatible object.

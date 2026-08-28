@@ -2,7 +2,6 @@ test_that("public API and S3 registration are available", {
   expected_exports <- c(
     "bw_detect_format",
     "bw_track",
-    "collapse_bwg",
     "merge_bwg",
     "is_bwg_track",
     "read_bwg",

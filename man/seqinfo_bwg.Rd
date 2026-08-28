@@ -9,5 +9,9 @@ seqinfo_bwg(x)
 \arguments{
 \item{x}{A local BigWig path or a \code{BwgTrack}-compatible object.}
 }
-\value{A data.table containing chromosome metadata.}
-\description{Return chromosome metadata}
+\value{
+A data.table containing chromosome metadata.
+}
+\description{
+Return chromosome metadata
+}
