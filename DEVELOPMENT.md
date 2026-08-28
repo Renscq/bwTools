@@ -133,18 +133,39 @@ Implementation notes:
 
 ## 0.5.x - Merge semantics
 
+Status: **implemented in 0.5.0.**
+
 Scope:
 
-- `merge_bwg()` to combine independent samples into one multi-sample BwgTrack without changing values.
-- `collapse_bwg()` to mathematically combine signals into one output track with an explicit overlap rule such as sum, mean, min, or max.
-- Chromosome-size and coordinate-contract conflict checks.
-- Streaming merge where feasible.
+- `merge_bwg()` directly unions signal records without changing values.
+- Same-sample disjoint chromosomes or intervals can be joined into one sample.
+- Different samples remain independent rows in one multi-sample `BwgTrack`.
+- `collapse_bwg()` performs explicit `sum` or `mean` aggregation.
+- Partial overlaps are segmented at all input boundaries before arithmetic.
+- `missing = "zero"` and `missing = "ignore"` define the denominator for means.
+- `groups` supports replicate- and treatment-level aggregation.
+- Strand-aware aggregation is separate by default and can be explicitly ignored.
+- Exact duplicates, same-sample overlaps during direct merge, and chromosome-size conflicts are handled explicitly.
+- Merge/collapse return memory-mode `BwgTrack` objects; persistence remains exclusively in `write_bwg()`.
 
 Acceptance criteria:
 
-- Sample merge never silently averages or drops signal.
-- Arithmetic collapse always requires an explicit aggregation rule when overlaps exist.
-- Input counts and resulting interval counts are reported by validation helpers.
+- Direct merge never silently averages, sums, or drops values.
+- Same-sample overlaps in `merge_bwg()` fail with a clear instruction to use `collapse_bwg()`.
+- Arithmetic collapse handles both identical and partially overlapping interval boundaries.
+- Mean aggregation has explicit uncovered-signal semantics.
+- Grouped aggregation preserves group provenance and produces deterministic output sample IDs.
+- Conflicting chromosome lengths fail before records are combined.
+- Input and output interval counts are recorded in operation metadata.
+- The four core same/different sample and same/different region scenarios are covered by regression tests.
+
+Implementation notes:
+
+- Arithmetic collapse uses a sweep-line event representation over 1-based closed intervals.
+- Atomic segments are emitted only while at least one input member is active.
+- `drop_zero = TRUE` preserves sparse-track behavior, while all-zero results remain valid empty `BwgTrack` objects.
+- `merge_adjacent = TRUE` joins adjacent equal-valued segments after aggregation.
+- Weighted aggregation and additional arithmetic methods can be added later without changing the merge/collapse responsibility boundary.
 
 ## 0.6.x - GeneTrackR integration
 

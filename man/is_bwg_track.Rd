@@ -9,9 +9,5 @@ is_bwg_track(x)
 \arguments{
 \item{x}{An R object.}
 }
-\value{
-Logical scalar.
-}
-\description{
-Test whether an object follows the BwgTrack contract
-}
+\value{Logical scalar.}
+\description{Test whether an object follows the BwgTrack contract}

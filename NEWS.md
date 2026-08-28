@@ -1,3 +1,14 @@
+# bwTools 0.5.0
+
+- Added `merge_bwg()` for direct union of same- or different-sample signal tracks without changing values.
+- Added `collapse_bwg()` for `sum` and `mean` aggregation across partially or fully overlapping intervals.
+- Added atomic interval segmentation so arithmetic aggregation does not require identical input boundaries.
+- Added explicit mean semantics through `missing = "zero"` and `missing = "ignore"`.
+- Added sample grouping through `groups` for replicate- or treatment-level aggregation.
+- Added strand-aware aggregation, chromosome-length conflict checks, explicit duplicate handling, compact adjacent-segment merging, and provenance metadata.
+- Kept file persistence outside merge/collapse; merged objects are written only through `write_bwg()`.
+- Added regression coverage for the four core merge scenarios, partial overlaps, grouping, duplicates, strand handling, and sequence-metadata conflicts.
+
 # bwTools 0.4.1
 
 - Consolidated genomic extraction into `retrieve_bwg()` and removed the overlapping `subset_bwg()` public API.
