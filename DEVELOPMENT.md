@@ -215,14 +215,65 @@ Acceptance criteria:
   supplied.
 - Lock these behaviors with format-detection regression tests.
 
-## 0.7.x - Large-file performance profiling
+## 0.7.0 - Large-file performance profiling
+
+Status: **implemented; real large-file benchmark runs required.**
+
+Scope:
+
+- Add `benchmark_bwg()` as a file-I/O diagnostic utility without changing the
+  BwgTrack schema or normal analysis contract.
+- Benchmark package-metadata-cold and cached lazy BigWig loading separately.
+- Benchmark indexed retrieval over deterministic or user-supplied regions.
+- Compare zoom-enabled statistics with bounded exact full-resolution
+  statistics.
+- Optionally benchmark in-memory merge materialization over four non-overlapping
+  pieces of the largest selected region.
+- Optionally benchmark native BigWig writing for the largest selected region
+  with zoom generation disabled and enabled.
+- Keep full-file memory loading explicit and opt-in.
+- Return raw per-iteration data and aggregate summaries rather than writing
+  benchmark reports automatically.
+
+Acceptance criteria:
+
+- The default benchmark suite can run on a large BigWig without full-file
+  materialization.
+- `stats_full` cannot accidentally run above `full_stats_max_bases`; oversized
+  cases are recorded as skipped.
+- Benchmark failures are captured in `status` and `message` without discarding
+  successful measurements from the same run.
+- Benchmark output records wall time, CPU time, approximate R heap maximum,
+  returned object size and rows, region throughput, and relevant file sizes.
+- Cold-cache labels explicitly refer only to the internal bwTools metadata cache
+  and do not claim to clear the operating-system page cache.
+- Writer profiling is bounded by the selected benchmark region rather than
+  silently rewriting the complete input file.
+- The benchmark utility does not add persistence controls outside existing
+  signal-writing responsibilities.
+
+Implementation notes:
+
+- Default centered windows are 10 kb, 1 Mb, and 10 Mb on the largest known
+  chromosome; representative user-supplied regions are preferred for real
+  profiling.
+- Peak memory uses `gc(reset = TRUE)` and therefore approximates R heap usage,
+  not total process RSS.
+- `read_memory` is available only as an explicit operation because compressed
+  BigWig size is not a safe predictor of in-memory interval-table size.
+- Benchmark output is a `bwToolsBenchmark` list with `system`, `file`, `config`,
+  `regions`, `results`, and `summary` components.
+
+## 0.7.1 - Benchmark-driven optimization
 
 Planned:
 
-- Benchmark lazy retrieval, statistics, merge materialization, native writing,
-  and zoom generation on large RNA-seq and Ribo-seq BigWig files.
+- Run 0.7.0 on real large RNA-seq and Ribo-seq BigWig files.
+- Identify whether bottlenecks are metadata parsing, R-tree traversal, block
+  decompression, data.table materialization, zoom aggregation, or writing.
 - Optimize only measured bottlenecks.
-- Introduce streaming writer changes if peak memory requires them.
+- Introduce streaming writer changes only if benchmarked peak memory justifies
+  the additional implementation complexity.
 
 ## 0.8.x - Statistics and zoom refinements
 

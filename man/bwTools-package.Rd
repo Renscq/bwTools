@@ -6,9 +6,10 @@
 \alias{bwTools-package}
 \title{bwTools: Native R tools for genomic signal tracks}
 \description{
-Native R tools for reading, writing, retrieving, merging, and summarizing
-BigWig, WIG, and bedGraph signal tracks. Public analysis functions operate on
-the standardized BwgTrack schema v2 and use 1-based closed coordinates.
+Native R tools for reading, writing, retrieving, merging, summarizing, and
+benchmarking BigWig, WIG, and bedGraph signal tracks. Public analysis
+functions operate on the standardized BwgTrack schema v2 and use 1-based
+closed coordinates.
 }
 \author{
 \strong{Maintainer}: Rensc \email{rensc0718@163.com}

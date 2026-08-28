@@ -1,6 +1,6 @@
 # bwTools public API contract
 
-Version: **schema 2 / bwTools 0.6.3**
+Version: **schema 2 / bwTools 0.7.0**
 
 Downstream packages should treat the following as the stable integration
 boundary:
@@ -20,10 +20,15 @@ zoominfo_bwg()
 summary_bwg()
 write_bwg()
 detect_bwg_format()
+benchmark_bwg()
 ```
 
-All analysis functions consume a validated `BwgTrack`. File paths enter through
-`read_bwg()` and leave through `write_bwg()`.
+All normal analysis functions consume a validated `BwgTrack`. File paths enter
+through `read_bwg()` and signal files leave through `write_bwg()`.
+
+`benchmark_bwg()` is the only diagnostic exception: it accepts one local
+BigWig file because its purpose is to measure file-I/O behavior itself. It
+returns a `bwToolsBenchmark` object and does not persist benchmark reports.
 
 ## Object schema
 
@@ -52,3 +57,25 @@ other bwTools functions.
 Downstream packages should use public accessors instead of private
 `bwTools:::` helpers or direct assumptions about internal implementation.
 Use `metadata_bwg()` for schema, operation, and provenance metadata.
+
+
+## Large-file benchmark contract
+
+`benchmark_bwg()` returns:
+
+```{text}
+bwToolsBenchmark
+├── system
+├── file
+├── config
+├── regions
+├── results
+└── summary
+```
+
+The benchmark does not alter the `BwgTrack` schema and is not required for
+normal downstream integration. Default profiling avoids full-memory BigWig
+loading. Exact statistics above `full_stats_max_bases` are recorded as skipped.
+Peak-memory reporting is an approximate R heap maximum from `gc()` rather than
+process RSS, and package-metadata-cold runs do not clear the operating-system
+file cache.

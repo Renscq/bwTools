@@ -1,3 +1,30 @@
+# bwTools 0.7.0
+
+## Large BigWig benchmark framework
+
+- Added public `benchmark_bwg()` for reproducible profiling of large local
+  BigWig files before performance optimization.
+- Added package-metadata-cold and cached lazy-read benchmarks without claiming
+  to flush the operating-system file cache.
+- Added indexed retrieval benchmarks across user-defined or deterministic
+  genomic windows.
+- Added zoom-enabled and exact full-resolution statistics benchmarks with a
+  configurable `full_stats_max_bases` safety bound.
+- Added optional in-memory merge profiling using four non-overlapping pieces of
+  the largest selected benchmark region.
+- Added optional native BigWig writing benchmarks for the largest selected
+  region with zoom generation disabled and enabled.
+- Added explicit opt-in full-memory loading benchmarks; full-memory reads are
+  excluded from the default suite to reduce out-of-memory risk.
+- Added structured per-iteration metrics for elapsed/CPU time, approximate R
+  heap maxima, returned object size and rows, genomic throughput, file
+  throughput, status, and captured diagnostic messages.
+- Added the `bwToolsBenchmark` return contract with system, file, config,
+  regions, results, and summary components.
+- Added regression coverage for the benchmark contract, bounded exact-stat
+  skips, explicit regions, merge/write profiling, full-memory profiling, and
+  non-BigWig rejection.
+
 # bwTools 0.6.3
 
 ## BigWig dispatch fix

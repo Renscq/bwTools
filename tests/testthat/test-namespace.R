@@ -1,5 +1,6 @@
 test_that("standardized public API and S3 registration are available", {
   expected_exports <- c(
+    "benchmark_bwg",
     "bwg_track",
     "detect_bwg_format",
     "is_bwg_track",
@@ -18,4 +19,5 @@ test_that("standardized public API and S3 registration are available", {
 
   expect_setequal(getNamespaceExports("bwTools"), expected_exports)
   expect_true(is.function(getS3method("print", "bwToolsTrack", optional = TRUE)))
+  expect_true(is.function(getS3method("print", "bwToolsBenchmark", optional = TRUE)))
 })
