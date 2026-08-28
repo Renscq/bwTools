@@ -10,9 +10,8 @@ zoominfo_bwg(x)
 \item{x}{A local BigWig path or a \code{BwgTrack}-compatible object.}
 }
 \value{
-A data.table containing \code{level}, \code{data_offset}, and
-\code{index_offset}. For \code{BwgTrack} input, a \code{sample_id} column is
-added.
+A data.table containing \code{level}, \code{data_offset}, and \code{index_offset}.
+For \code{BwgTrack} input, a \code{sample_id} column is added.
 }
 \description{
 Returns the zoom reduction levels stored in a local BigWig file. For a

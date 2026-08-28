@@ -9,5 +9,9 @@ bw_detect_format(file)
 \arguments{
 \item{file}{Local signal file path.}
 }
-\value{One of \code{bigwig}, \code{wig}, or \code{bedgraph}.}
-\description{Detect genomic signal file format}
+\value{
+One of \code{bigwig}, \code{wig}, or \code{bedgraph}.
+}
+\description{
+Detect genomic signal file format
+}

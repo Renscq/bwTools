@@ -89,37 +89,47 @@ external variable names that collide with column names. Package tests now cover
 chromosome isolation, sample-specific sequence metadata, and chromosome-specific
 in-memory statistics.
 
-## 0.4.x - Subset and file transformation
+## 0.4.x - Unified genomic retrieval
 
-Status: **implemented in 0.4.0.**
+Status: **implemented in 0.4.1.**
 
 Scope:
 
-- `retrieve_bwg()` for single-region retrieval.
-- `subset_bwg()` for multi-region in-memory and file-to-file extraction.
-- Indexed lazy BigWig extraction without loading the complete source track.
-- Cross-format subset output to BigWig, WIG, or bedGraph.
-- Explicit empty-sample behavior for file output.
+- `retrieve_bwg()` is the only public genomic extraction interface.
+- Single-region queries continue to use `chrom`, `start`, and `end`.
+- Multi-region queries use a `regions` table with `chrom`, `start`, and `end`.
+- `result = "data"` preserves the existing data.table return contract.
+- `result = "track"` returns a memory-mode `BwgTrack` suitable for downstream
+  `write_bwg()` calls.
+- Lazy BigWig extraction remains R-tree indexed and does not load the complete
+  source track.
+- File output, compression, format conversion, and BigWig zoom construction are
+  intentionally excluded from retrieval and remain responsibilities of
+  `write_bwg()`.
 
 Acceptance criteria:
 
-- Subset coordinates are clipped correctly.
-- Empty regions produce valid empty results or explicit output behavior.
-- Large-file subset memory use scales with the selected intervals and queried
-  BigWig blocks, not the complete source file size.
+- Existing single-region `retrieve_bwg()` calls remain valid.
+- Multi-region coordinates are normalized as a genomic union and clipped
+  correctly without coordinate rebasing.
+- Retrieval never accepts writer-only controls such as output format, zoom, or
+  compression.
+- A retrieved `BwgTrack` can be passed explicitly to `write_bwg()` without an
+  intermediate conversion step.
+- Large-file retrieval memory use scales with queried BigWig blocks rather than
+  complete file size.
 
 Implementation notes:
 
-- Regions use 1-based closed coordinates and are treated as a genomic union.
-- Overlapping and directly adjacent regions are merged before retrieval.
-- Signal intervals crossing a subset boundary are clipped without coordinate
-  rebasing.
-- Lazy BigWig sources are queried through the native R-tree index for each
-  normalized region.
-- The 0.4.0 writer path materializes only the selected subset before calling the
-  existing writer; a whole source track is never loaded solely for subsetting.
-- Empty in-memory subsets are valid. File output errors by default when a
-  selected sample is empty, or records it explicitly when `empty = "skip"`.
+- Overlapping and directly adjacent query regions are merged before retrieval to
+  prevent duplicate signal records.
+- Sample selection validates unknown sample IDs rather than silently dropping
+  them.
+- `result = "track"` preserves selected sample metadata and chromosome lengths
+  for the retrieved chromosomes.
+- The former `subset_bwg()` API was removed before the package reached a stable
+  1.0 public API because it duplicated `retrieve_bwg()` and mixed extraction
+  with persistence.
 
 ## 0.5.x - Merge semantics
 

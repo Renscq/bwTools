@@ -4,15 +4,48 @@
 \alias{retrieve_bwg}
 \title{Retrieve signal intervals}
 \usage{
-retrieve_bwg(object, chrom, start, end, samples = NULL, strand = "ignore")
+retrieve_bwg(
+  object,
+  chrom = NULL,
+  start = NULL,
+  end = NULL,
+  samples = NULL,
+  strand = "ignore",
+  regions = NULL,
+  result = c("data", "track")
+)
 }
 \arguments{
 \item{object}{A \code{BwgTrack}-compatible object.}
-\item{chrom}{Chromosome name.}
-\item{start}{Start coordinate in 1-based closed coordinates.}
-\item{end}{End coordinate in 1-based closed coordinates.}
-\item{samples}{Optional sample IDs.}
+
+\item{chrom}{Optional chromosome name for a single-region query.}
+
+\item{start}{Optional start coordinate for a single-region query.}
+
+\item{end}{Optional end coordinate for a single-region query.}
+
+\item{samples}{Optional sample IDs. By default all samples are considered.}
+
 \item{strand}{Optional strand selector: \code{+}, \code{-}, \code{*}, \code{both}, or \code{ignore}.}
+
+\item{regions}{Optional data.frame or data.table containing \code{chrom}, \code{start},
+and \code{end} columns. Use either \code{regions} or \code{chrom}/\code{start}/\code{end}.}
+
+\item{result}{Result type: \code{data} returns the in-memory signal data.table;
+\code{track} returns a memory-mode \code{BwgTrack} containing the selected samples,
+signal, and chromosome metadata.}
 }
-\value{A signal data.table in 1-based closed coordinates.}
-\description{Retrieve signal intervals}
+\value{
+A signal data.table or a memory-mode \code{BwgTrack}, depending on
+\code{result}.
+}
+\description{
+Retrieves one or more genomic regions from a \code{BwgTrack}-compatible object.
+Query coordinates are 1-based closed. Overlapping or directly adjacent
+regions are merged before retrieval, and signal intervals crossing query
+boundaries are clipped without rebasing genomic coordinates.
+
+By default a signal data.table is returned for backward compatibility. Use
+\code{result = "track"} when the retrieved data should remain in the standard
+\code{BwgTrack} contract, for example before passing it to \code{write_bwg()}.
+}

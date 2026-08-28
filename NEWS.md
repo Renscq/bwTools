@@ -1,13 +1,19 @@
+# bwTools 0.4.1
+
+- Consolidated genomic extraction into `retrieve_bwg()` and removed the overlapping `subset_bwg()` public API.
+- Added multi-region retrieval through the `regions` argument while preserving the existing single-region `chrom`/`start`/`end` interface.
+- Added `result = "track"` for write-ready in-memory `BwgTrack` results while keeping `result = "data"` as the backward-compatible default.
+- Removed all file-output, format, compression, and zoom controls from genomic extraction; persistence remains exclusively in `write_bwg()`.
+- Kept indexed lazy BigWig retrieval, region normalization, boundary clipping, and original genomic coordinates in the unified retrieval path.
+- Added regression tests for single-region compatibility, multi-region unions, lazy indexed retrieval, write-ready track results, and query validation.
+- Reworked `README.qmd` and the development roadmap around the separated read/retrieve/stats/write responsibilities.
+
 # bwTools 0.4.0
 
-- Added `subset_bwg()` for multi-region genomic extraction from memory and lazy BigWig tracks.
-- Added indexed lazy BigWig subsetting so only R-tree blocks overlapping requested regions are decoded.
+- Added indexed multi-region genomic extraction from memory and lazy BigWig tracks.
 - Added region normalization that merges overlapping or directly adjacent intervals before extraction.
 - Added boundary clipping while preserving original genomic coordinates and chromosome lengths.
-- Added BigWig, WIG, and bedGraph subset output through the native writer stack.
-- Added explicit empty-sample handling for file output with `empty = "error"` or `empty = "skip"`.
-- Added regression tests for memory and lazy subsetting, cross-format round trips, empty regions, sample preservation, and coordinate validation.
-- Expanded `README.qmd` with executable subset validation examples.
+- This functionality was consolidated into `retrieve_bwg()` in 0.4.1 before API stabilization.
 
 # bwTools 0.3.4
 

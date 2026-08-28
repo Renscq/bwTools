@@ -8,9 +8,16 @@ bw_track(samples, data = NULL, seqinfo = NULL, meta = list())
 }
 \arguments{
 \item{samples}{Sample metadata table. Must contain \code{sample_id}.}
+
 \item{data}{Optional in-memory signal table.}
+
 \item{seqinfo}{Optional chromosome metadata table.}
+
 \item{meta}{Optional metadata list.}
 }
-\value{An object inheriting from \code{BwgTrack} and \code{bwToolsTrack}.}
-\description{Construct a BwgTrack-compatible signal object}
+\value{
+An object inheriting from \code{BwgTrack} and \code{bwToolsTrack}.
+}
+\description{
+Construct a BwgTrack-compatible signal object
+}

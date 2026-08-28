@@ -1,4 +1,6 @@
-Current development release: **0.4.0**
+# bwTools
+
+Current development release: **0.4.1**
 
 `bwTools` provides native-R I/O and indexed analysis for BigWig, WIG, and
 bedGraph genomic signal tracks. It is designed as the signal backend for
@@ -497,167 +499,114 @@ assert_signal_equal(
 ```
 
 
-## Subset validation
+## Multi-region retrieval
 
-`subset_bwg()` extracts the union of one or more genomic regions while keeping
-original genomic coordinates. Intervals crossing a requested boundary are
-clipped to that boundary. Overlapping or directly adjacent query regions are
-merged before extraction so the same signal is not duplicated.
+`retrieve_bwg()` is the only genomic extraction interface. It supports both the
+original single-region API and a `regions` table for multi-region retrieval.
+Extraction never writes files and does not expose writer-specific controls such
+as `format`, `compress`, `zoom`, or `max_zoom_levels`.
 
-For lazy BigWig tracks, subsetting remains index-driven: only BigWig blocks
-that overlap the requested regions are decoded. The complete source file is not
-loaded into memory.
+Overlapping or directly adjacent query regions are merged before retrieval.
+Signal intervals crossing a query boundary are clipped while keeping their
+original genomic coordinate system.
 
-### 14. Create an in-memory subset
+### 14. Retrieve multiple regions as signal data
 
 ```{r}
-subset_regions <- data.frame(
+retrieve_regions <- data.frame(
   chrom = c("chr1", "chr1", "chr2"),
   start = c(510L, 561L, 450L),
   end = c(560L, 600L, 900L)
 )
 
-subset_track <- subset_bwg(
+retrieved_data <- retrieve_bwg(
   roundtrip_lazy,
-  regions = subset_regions
+  regions = retrieve_regions
 )
 
-print(subset_track)
-print(subset_track$meta$subset_regions)
+print(retrieved_data)
 
 stopifnot(
-  is_bwg_track(subset_track),
-  identical(subset_track$meta$mode, "memory"),
-  isTRUE(subset_track$meta$subset),
-  nrow(subset_track$meta$subset_regions) == 2L,
-  all(subset_track$data$chrom %in% c("chr1", "chr2"))
+  nrow(retrieved_data) > 0L,
+  all(retrieved_data$chrom %in% c("chr1", "chr2"))
 )
 ```
 
-The first two input regions are adjacent and therefore become one normalized
-region, `chr1:510-600`.
+The two adjacent `chr1` queries are normalized to the genomic union
+`chr1:510-600`, preventing duplicate signal records.
 
-### 15. Write a BigWig subset
+### 15. Retrieve a write-ready BwgTrack
+
+Use `result = "track"` when the extracted signal should remain inside the
+standard `BwgTrack` object contract:
 
 ```{r}
-subset_bigwig_dir <- file.path(test_root, "subset_bigwig")
-
-subset_bigwig <- subset_bwg(
+retrieved_track <- retrieve_bwg(
   roundtrip_lazy,
-  regions = subset_regions,
-  outdir = subset_bigwig_dir,
+  regions = retrieve_regions,
+  result = "track"
+)
+
+print(retrieved_track)
+print(retrieved_track$meta$retrieval_regions)
+
+stopifnot(
+  is_bwg_track(retrieved_track),
+  identical(retrieved_track$meta$mode, "memory"),
+  isTRUE(retrieved_track$meta$retrieved),
+  nrow(retrieved_track$meta$retrieval_regions) == 2L
+)
+```
+
+The default `result = "data"` is retained for compatibility with existing
+GeneTrackR code that expects the signal data.table directly.
+
+### 16. Persist retrieved data only with write_bwg()
+
+File output is deliberately separated from retrieval:
+
+```{r}
+retrieved_bigwig_dir <- file.path(
+  test_root,
+  "retrieved_bigwig"
+)
+
+retrieved_bigwig <- write_bwg(
+  retrieved_track,
+  outdir = retrieved_bigwig_dir,
   format = "bigwig",
   overwrite = TRUE
 )
 
-print(subset_bigwig)
-
 stopifnot(
-  nrow(subset_bigwig) == 1L,
-  subset_bigwig$status == "written",
-  file.exists(subset_bigwig$file)
+  nrow(retrieved_bigwig) == 1L,
+  file.exists(retrieved_bigwig$file)
 )
 ```
 
-Read the subset file back and compare it with the in-memory subset:
+Read the new file back and compare it with the retrieved in-memory track:
 
 ```{r}
-subset_bigwig_roundtrip <- read_bwg(
-  subset_bigwig$file,
+retrieved_roundtrip <- read_bwg(
+  retrieved_bigwig$file,
   format = "bigwig",
   sample_names = "example",
   mode = "memory"
 )
 
 assert_signal_equal(
-  subset_track$data,
-  subset_bigwig_roundtrip$data
-)
-
-subset_seqinfo <- seqinfo_bwg(subset_bigwig_roundtrip)
-print(subset_seqinfo)
-
-stopifnot(
-  identical(subset_seqinfo$chrom, c("chr1", "chr2")),
-  identical(subset_seqinfo$length, c(10000L, 8000L))
+  retrieved_track$data,
+  retrieved_roundtrip$data
 )
 ```
 
-The subset retains the original chromosome lengths and coordinates. It does not
-rebase `chr1:510-600` to `1-91`.
+This separation keeps responsibilities explicit:
 
-### 16. Write WIG and bedGraph subsets
-
-```{r}
-for (subset_format in c("wig", "bedgraph")) {
-  subset_dir <- file.path(
-    test_root,
-    paste0("subset_", subset_format)
-  )
-
-  subset_written <- subset_bwg(
-    roundtrip_lazy,
-    regions = subset_regions,
-    outdir = subset_dir,
-    format = subset_format,
-    overwrite = TRUE
-  )
-
-  subset_roundtrip <- read_bwg(
-    subset_written$file,
-    format = subset_format,
-    sample_names = "example",
-    mode = "memory"
-  )
-
-  assert_signal_equal(
-    subset_track$data,
-    subset_roundtrip$data
-  )
-}
-```
-
-### 17. Empty-region behavior
-
-An in-memory subset can be empty and remains a valid `BwgTrack`:
-
-```{r}
-empty_regions <- data.frame(
-  chrom = "chr1",
-  start = 2000L,
-  end = 2100L
-)
-
-empty_track <- subset_bwg(
-  roundtrip_lazy,
-  regions = empty_regions
-)
-
-stopifnot(
-  is_bwg_track(empty_track),
-  nrow(empty_track$data) == 0L
-)
-```
-
-File output does not silently omit empty samples. The default is an explicit
-error. Use `empty = "skip"` when skipping empty samples is intentional:
-
-```{r}
-empty_manifest <- subset_bwg(
-  roundtrip_lazy,
-  regions = empty_regions,
-  outdir = file.path(test_root, "empty_subset"),
-  format = "bigwig",
-  empty = "skip"
-)
-
-print(empty_manifest)
-
-stopifnot(
-  empty_manifest$status == "empty",
-  empty_manifest$intervals == 0L,
-  is.na(empty_manifest$file)
-)
+```{text}
+read_bwg()      open/load tracks
+retrieve_bwg()  extract genomic regions
+stats_bwg()     calculate interval statistics
+write_bwg()     persist or convert tracks
 ```
 
 ## Coordinate contract
@@ -708,7 +657,7 @@ should be treated as a regression before continuing development.
 - **0.1.x**: native reader and stable `BwgTrack` contract — implemented.
 - **0.2.x**: native BigWig/WIG/bedGraph writer — implemented.
 - **0.3.x**: BigWig zoom levels and interval statistics — implemented.
-- **0.4.x**: indexed genomic subset and cross-format extraction — current stage.
+- **0.4.x**: unified indexed single-/multi-region retrieval — current stage.
 - **0.5.x**: multi-track merge and explicit arithmetic collapse.
 - **0.6.x**: GeneTrackR backend integration.
 - **1.0.0**: stable API and cross-platform release.

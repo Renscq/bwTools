@@ -8,7 +8,6 @@ test_that("public API and S3 registration are available", {
     "seqinfo_bwg",
     "summary_bwg",
     "stats_bwg",
-    "subset_bwg",
     "write_bwg",
     "zoominfo_bwg"
   )
