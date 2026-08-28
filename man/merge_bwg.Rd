@@ -16,24 +16,23 @@ merge_bwg(
 )
 }
 \arguments{
-\item{...}{Two or more \code{BwgTrack}-compatible objects.}
+\item{...}{Two or more validated \code{BwgTrack} objects.}
 
-\item{tracks}{Optional list of \code{BwgTrack}-compatible objects. Use either
+\item{tracks}{Optional list of validated \code{BwgTrack} objects. Use either
 \code{...} or \code{tracks}.}
 
-\item{method}{Merge strategy. \code{auto} performs conservative,
-non-arithmetic merging; \code{mean} and \code{sum} perform explicit arithmetic
-aggregation.}
+\item{method}{Merge strategy. \code{auto} performs conservative, non-arithmetic
+merging; \code{mean} and \code{sum} perform explicit arithmetic aggregation.}
 
-\item{groups}{Optional named character vector or table with \code{sample_id}
-and \code{group_id} columns. Used only for arithmetic methods.}
+\item{groups}{Optional named character vector or table with \code{sample_id} and
+\code{group_id} columns. Used only for arithmetic methods.}
 
-\item{missing}{Mean denominator rule. \code{ignore} averages only members
-covering an atomic segment; \code{zero} treats uncovered members as zero.
-Ignored for \code{auto} and \code{sum}.}
+\item{missing}{Mean denominator rule. \code{ignore} averages only members covering
+an atomic segment; \code{zero} treats uncovered members as zero. Ignored for
+\code{auto} and \code{sum}.}
 
-\item{strand}{Strand handling rule. \code{separate} keeps \code{+}, \code{-},
-and \code{*} signals separate; \code{ignore} combines strands.}
+\item{strand}{Strand handling rule. \code{separate} keeps \code{+}, \code{-}, and \code{*}
+signals separate; \code{ignore} combines strands.}
 
 \item{drop_zero}{Whether zero-valued arithmetic output segments should be
 omitted. Ignored for \code{method = "auto"}.}
@@ -49,13 +48,11 @@ Combines two or more \code{BwgTrack} objects through one user-facing interface.
 The default \code{method = "auto"} preserves sample identities and signal values
 without requiring users to determine whether inputs contain the same samples
 or overlapping genomic regions.
-}
-\details{
+
 In auto mode, different samples remain separate, disjoint regions from the
 same sample are appended, exact duplicates and equal-valued overlaps are
 consolidated automatically, and conflicting overlaps from the same sample
-stop with an instruction to choose \code{method = "mean"} or
-\code{method = "sum"}.
+stop with an instruction to choose \code{method = "mean"} or \code{method = "sum"}.
 
 Arithmetic methods split partial overlaps at every input boundary. Without
 \code{groups}, one unique sample ID is preserved, while multiple sample IDs are

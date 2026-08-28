@@ -8,7 +8,7 @@ execute:
 
 # bwTools
 
-Current development release: **0.7.3**
+Current development release: **0.7.4**
 
 `bwTools` provides native-R reading, writing, indexed retrieval, merging, and
 statistics for BigWig, WIG, and bedGraph genomic signal tracks.
@@ -17,8 +17,9 @@ The 0.6.x series standardized the public API and the `BwgTrack` object contract
 so downstream packages can use bwTools without depending on internal list
 implementation details. Version 0.7.0 established reproducible large-BigWig
 benchmarks; version 0.7.1 introduced block-streamed exact statistics, version
-0.7.2 refined indexed retrieval and memory diagnostics, and version 0.7.3 adds
-real native-writer profiling without changing the public analysis API.
+0.7.2 refined indexed retrieval and memory diagnostics, version 0.7.3 added
+native-writer profiling, and version 0.7.4 makes expensive writer benchmarks
+bounded and observable on dense BigWig signals.
 
 ## Core principles
 
@@ -643,10 +644,33 @@ bench_io <- benchmark_bwg(
 
 `merge` materializes four non-overlapping parts of the largest selected region
 before timing `merge_bwg()`. `write` materializes each selected benchmark region
-*before* writer timing, then benchmarks `write_bwg()` with both `zoom = FALSE`
-and the default `zoom = TRUE`. Indexed retrieval is therefore excluded from the
-writer timing itself. Writer cases larger than `write_max_bases` are recorded as
-skipped.
+*before* writer timing, then benchmarks `write_bwg()` with `zoom = FALSE` and,
+when the signal density is within the configured safety bound, `zoom = TRUE`.
+Indexed retrieval is therefore excluded from writer timing itself.
+
+Writer profiling uses independent conservative repetition controls:
+
+```{text}
+write_iterations = 1L
+write_warmup      = 0L
+```
+
+The general `iterations` and `warmup` arguments continue to control read,
+retrieve, statistics, merge, and memory-read cases. A warmup is now executed
+once per benchmark case rather than once before every timed iteration.
+
+Writer safety uses both genomic size and actual signal density:
+
+```{text}
+write_max_bases            maximum genomic span for writer profiling
+write_max_intervals        maximum intervals for any writer case
+write_zoom_max_intervals   stricter interval limit for zoom_on
+```
+
+This matters for dense RNA-seq/Ribo-seq BigWig files: a 5 Mb region can contain
+well over one million intervals even though its genomic span appears modest.
+`verbose = TRUE` prints concise progress messages so an expensive writer case is
+never indistinguishable from a stalled R session.
 
 Full-file memory loading is never part of the default suite. It must be selected
 explicitly:
@@ -745,17 +769,20 @@ benchmarking to native BigWig writing. The optional writer benchmark now profile
 every selected region up to `write_max_bases` rather than only the largest region.
 This makes scaling across 1 Mb, 5 Mb, and 10 Mb regions directly visible.
 
-For the first real writer benchmark, a focused configuration is recommended:
+For the first real writer benchmark, use the conservative writer defaults:
 
 ```{r}
 bench_write <- benchmark_bwg(
   "/data/sample.bigwig",
   sample_id = "sampleA",
   region_sizes = c(1e6, 5e6),
-  iterations = 3L,
-  warmup = 1L,
   operations = "write",
-  write_max_bases = 5e6
+  write_max_bases = 5e6,
+  write_max_intervals = 2e6,
+  write_zoom_max_intervals = 5e5,
+  write_iterations = 1L,
+  write_warmup = 0L,
+  verbose = TRUE
 )
 
 bench_write$summary
@@ -808,6 +835,37 @@ time zoom construction adds, and how much larger the final BigWig becomes. If
 `zoom_off` itself is slow or memory-heavy, later optimization should target the
 primary data-block/R-tree path. If most cost appears only in `zoom_on`, optimization
 should target zoom-record construction and zoom writing instead.
+
+### 0.7.4 bounded writer benchmark execution
+
+Version 0.7.4 fixes an important benchmark-design problem discovered with a
+high-density real BigWig file. In 0.7.3, `warmup = 1` was executed inside every
+timed iteration. A configuration with two regions, two writer variants,
+`iterations = 3`, and `warmup = 1` therefore performed 24 complete BigWig
+writes rather than the intended small profiling run.
+
+The problem is particularly severe for `zoom_on`. The current pure-R zoom
+builder scans the input signal once for every selected zoom level. Dense signal
+tracks can therefore make a large zoom writer case intentionally expensive even
+when the writer is functioning correctly.
+
+Version 0.7.4 changes benchmark behavior, not BigWig semantics:
+
+```{text}
+warmup              once per normal benchmark case
+write_warmup         once per writer case; default 0
+write_iterations     timed writer repetitions; default 1
+write_max_intervals  bounds all writer cases by signal density
+write_zoom_max_intervals
+                    independently bounds the more expensive zoom_on path
+verbose              prints benchmark progress; default TRUE
+```
+
+With the defaults, a dense 5 Mb region can still profile the primary writer
+when its interval count is acceptable, while an excessively expensive zoom
+case is recorded as `skipped` instead of appearing to hang indefinitely.
+Raising these safety bounds remains possible when deliberately stress-testing
+the zoom writer.
 
 ### Benchmark result contract
 
@@ -927,9 +985,8 @@ SKIP 0
 - **0.7.1**: block-streamed exact statistics and first reader optimization.
 - **0.7.2**: indexed retrieval refinement and live/peak heap diagnostics.
 - **0.7.3**: multi-region native BigWig writer profiling and zoom-overhead metrics.
-- **0.7.4**: conditional writer optimization only if the real benchmark identifies a bottleneck.
-- **0.7.1**: block-streamed exact-statistics optimization.
-- **0.7.2**: chunked indexed retrieval and clearer heap diagnostics — current stage.
+- **0.7.4**: bounded writer benchmarking, interval-density guards, and progress diagnostics — current stage.
+- **0.7.5**: conditional native writer optimization if the bounded benchmark justifies it.
 - **0.8.x**: statistics and zoom refinements where justified by benchmarks.
 - **0.9.x**: API freeze, cross-platform checks, and release hardening.
 - **1.0.0**: stable public release.

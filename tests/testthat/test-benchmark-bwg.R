@@ -253,3 +253,64 @@ test_that("write benchmark respects write_max_bases", {
   expect_true(all(large$status == "skipped"))
   expect_true(all(grepl("write_max_bases", large$message, fixed = TRUE)))
 })
+
+
+test_that("writer benchmark uses independent conservative repetitions", {
+  file <- system.file(
+    "extdata", "bwtools_example.bigwig",
+    package = "bwTools", mustWork = TRUE
+  )
+
+  benchmark <- benchmark_bwg(
+    file,
+    sample_id = "example",
+    region_sizes = 1000L,
+    iterations = 3L,
+    warmup = 1L,
+    operations = "write",
+    write_iterations = 1L,
+    write_warmup = 0L,
+    verbose = FALSE
+  )
+
+  write_rows <- benchmark$results[benchmark$results$operation == "write"]
+  expect_equal(nrow(write_rows), 2L)
+  expect_setequal(write_rows$variant, c("zoom_off", "zoom_on"))
+  expect_true(all(write_rows$iteration == 1L))
+})
+
+test_that("zoom writer benchmark can be skipped independently by interval density", {
+  file <- system.file(
+    "extdata", "bwtools_example.bigwig",
+    package = "bwTools", mustWork = TRUE
+  )
+
+  benchmark <- benchmark_bwg(
+    file,
+    sample_id = "example",
+    region_sizes = 2000L,
+    operations = "write",
+    write_max_intervals = 100000L,
+    write_zoom_max_intervals = 1L,
+    write_iterations = 1L,
+    write_warmup = 0L,
+    verbose = FALSE
+  )
+
+  write_rows <- benchmark$results[benchmark$results$operation == "write"]
+  zoom_off <- write_rows[write_rows$variant == "zoom_off"]
+  zoom_on <- write_rows[write_rows$variant == "zoom_on"]
+  expect_equal(zoom_off$status, "ok")
+  expect_equal(zoom_on$status, "skipped")
+  expect_match(zoom_on$message, "write_zoom_max_intervals", fixed = TRUE)
+})
+
+test_that("benchmark warmup helper runs the requested count once", {
+  calls <- 0L
+  fun <- function() {
+    calls <<- calls + 1L
+    invisible(NULL)
+  }
+  bwTools:::bw_benchmark_warmup(fun, 2L)
+  expect_equal(calls, 2L)
+})

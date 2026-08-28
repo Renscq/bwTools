@@ -344,6 +344,35 @@ Acceptance criteria:
 - Reader/retrieval optimization is therefore frozen for the 0.7.3 writer
   profiling stage unless later benchmarks demonstrate a new regression.
 
+## 0.7.4 - Writer benchmark safety and diagnostics
+
+Status: **implemented; real-file rerun required.**
+
+Goals:
+
+- Make writer profiling finish predictably on dense BigWig signal tracks.
+- Run general benchmark warmups once per benchmark case rather than once per
+  timed iteration.
+- Separate expensive writer repetition settings from general read/statistics
+  benchmark repetition settings.
+- Bound writer work by both genomic span and actual interval count.
+- Apply a stricter density bound to `zoom_on`, whose current pure-R builder
+  rescans signal intervals for each zoom level.
+- Print concise progress messages for expensive writer cases.
+
+Acceptance criteria:
+
+- `iterations = 3, warmup = 1` no longer multiplies writer work when the caller
+  leaves writer-specific controls at their safe defaults.
+- Default writer profiling performs one timed write and zero writer warmups per
+  eligible variant/region case.
+- A dense region may run `zoom_off` while independently skipping `zoom_on` when
+  it exceeds `write_zoom_max_intervals`.
+- Skipped writer cases remain visible in benchmark results with actionable
+  messages.
+- Writer timing still excludes region retrieval/materialization.
+- No BigWig binary-format or public BwgTrack contract changes are introduced.
+
 ## 0.7.3 - Native BigWig writer benchmark and profiling
 
 Status: **implemented; real large-file writer benchmark required.**
@@ -382,13 +411,13 @@ Acceptance criteria:
 - Real-file profiling should use at least two region sizes, preferably around
   1 Mb and 5 Mb or 10 Mb, on a dense signal track.
 - Use writer timing, intervals/s, peak/live heap, output size, and zoom overhead
-  to decide whether 0.7.4 needs streaming/chunked writer changes.
+  to decide whether 0.7.5 needs streaming/chunked writer changes.
 - Do not optimize writer internals until the 0.7.3 real-file benchmark identifies
   a concrete bottleneck.
 
-## 0.7.4 - Conditional native writer optimization
+## 0.7.5 - Conditional native writer optimization
 
-Status: **planned only if the 0.7.3 real-file benchmark justifies it.**
+Status: **planned only if the bounded 0.7.4 real-file benchmark justifies it.**
 
 Decision rules:
 

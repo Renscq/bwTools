@@ -1,3 +1,22 @@
+# bwTools 0.7.4
+
+## Bounded and observable writer benchmarking
+
+- Fixed benchmark warmup semantics so untimed warmups run once per benchmark
+  case instead of once before every timed iteration.
+- Added independent `write_iterations` and `write_warmup` controls with safe
+  writer defaults of one timed write and no warmup write.
+- Added `write_max_intervals` to bound writer profiling by actual signal
+  density rather than genomic span alone.
+- Added `write_zoom_max_intervals` as a stricter safety guard for the current
+  pure-R zoom builder, which scans dense signals across multiple zoom levels.
+- Added `verbose = TRUE` progress messages for writer materialization, skips,
+  writer variants, and timed completion.
+- Kept native BigWig writer output, reader behavior, BwgTrack schema v2, and
+  all normal analysis APIs unchanged.
+- Added regression tests for writer-specific repetition controls and
+  interval-density safety guards.
+
 # bwTools 0.7.3
 
 ## Native BigWig writer benchmark and profiling

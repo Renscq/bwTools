@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-29
-# Version: dev003
+# Version: dev004
 # Function: Run structured large BigWig performance benchmarks
 # Input: One local BigWig file and benchmark configuration
 # Output: bwToolsBenchmark object with raw and summarized metrics
@@ -36,9 +36,18 @@
 #'   regions are recorded as skipped rather than forcing an expensive exact
 #'   calculation.
 #' @param write_max_bases Maximum region size for the optional `write`
-#'   benchmark. Larger regions are recorded as skipped. Writer profiling is
-#'   opt-in and benchmarks every selected region up to this bound with zoom
-#'   disabled and enabled.
+#'   benchmark. Larger regions are recorded as skipped.
+#' @param write_max_intervals Maximum number of signal intervals allowed for
+#'   any writer benchmark case. Denser regions are skipped before writing.
+#' @param write_zoom_max_intervals Maximum number of signal intervals allowed
+#'   for `zoom_on` writer profiling. `zoom_off` may still run up to
+#'   `write_max_intervals`. This protects the pure-R zoom builder from
+#'   unexpectedly expensive dense-signal benchmarks.
+#' @param write_iterations Timed iterations used by writer profiling. Writer
+#'   benchmarks use an independent conservative default because each iteration
+#'   creates a complete BigWig file.
+#' @param write_warmup Untimed writer warmup iterations per writer case.
+#' @param verbose Whether to print concise benchmark progress messages.
 #' @return A `bwToolsBenchmark` object containing `system`, `file`, `config`,
 #'   `regions`, `results`, and `summary` components. Memory metrics distinguish
 #'   current live R heap after garbage collection from the approximate maximum
@@ -56,7 +65,12 @@ benchmark_bwg <- function(
   warmup = 1L,
   operations = c("read_lazy", "retrieve", "stats_zoom", "stats_full"),
   full_stats_max_bases = 1e6,
-  write_max_bases = 1e7
+  write_max_bases = 1e7,
+  write_max_intervals = 2e6,
+  write_zoom_max_intervals = 5e5,
+  write_iterations = 1L,
+  write_warmup = 0L,
+  verbose = TRUE
 ) {
   file <- bw_validate_local_file(file)
   if (!identical(detect_bwg_format(file), "bigwig")) {
@@ -78,6 +92,26 @@ benchmark_bwg <- function(
     write_max_bases,
     "write_max_bases"
   )
+  write_max_intervals <- bw_benchmark_positive_integer(
+    write_max_intervals,
+    "write_max_intervals"
+  )
+  write_zoom_max_intervals <- bw_benchmark_positive_integer(
+    write_zoom_max_intervals,
+    "write_zoom_max_intervals"
+  )
+  write_iterations <- bw_benchmark_positive_integer(
+    write_iterations,
+    "write_iterations"
+  )
+  write_warmup <- bw_benchmark_positive_integer(
+    write_warmup,
+    "write_warmup",
+    allow_zero = TRUE
+  )
+  if (!is.logical(verbose) || length(verbose) != 1L || is.na(verbose)) {
+    bw_stop("`verbose` must be TRUE or FALSE.")
+  }
 
   operations <- unique(as.character(operations))
   if (length(operations) < 1L || anyNA(operations) || any(!nzchar(operations))) {
@@ -137,12 +171,10 @@ benchmark_bwg <- function(
       ))
     }
 
-    invisible(read_bwg(file, sample_ids = sample_id, mode = "lazy"))
+    warm_fun <- function() read_bwg(file, sample_ids = sample_id, mode = "lazy")
+    bw_benchmark_warmup(warm_fun, warmup)
     for (iteration in seq_len(iterations)) {
-      measurement <- bw_benchmark_measure(
-        function() read_bwg(file, sample_ids = sample_id, mode = "lazy"),
-        warmup = warmup
-      )
+      measurement <- bw_benchmark_measure(warm_fun, warmup = 0L)
       add_row(bw_benchmark_result_row(
         measurement,
         operation = "read_lazy",
@@ -156,18 +188,17 @@ benchmark_bwg <- function(
   if ("retrieve" %in% operations) {
     for (region_i in seq_len(nrow(benchmark_regions))) {
       region <- benchmark_regions[region_i]
+      benchmark_fun <- function() retrieve_bwg(
+        lazy_track,
+        chrom = region[["chrom"]],
+        start = region[["start"]],
+        end = region[["end"]],
+        sample_ids = sample_id,
+        result = "data"
+      )
+      bw_benchmark_warmup(benchmark_fun, warmup)
       for (iteration in seq_len(iterations)) {
-        measurement <- bw_benchmark_measure(
-          function() retrieve_bwg(
-            lazy_track,
-            chrom = region[["chrom"]],
-            start = region[["start"]],
-            end = region[["end"]],
-            sample_ids = sample_id,
-            result = "data"
-          ),
-          warmup = warmup
-        )
+        measurement <- bw_benchmark_measure(benchmark_fun, warmup = 0L)
         add_row(bw_benchmark_result_row(
           measurement,
           operation = "retrieve",
@@ -183,20 +214,19 @@ benchmark_bwg <- function(
   if ("stats_zoom" %in% operations) {
     for (region_i in seq_len(nrow(benchmark_regions))) {
       region <- benchmark_regions[region_i]
+      benchmark_fun <- function() stats_bwg(
+        lazy_track,
+        chrom = region[["chrom"]],
+        start = region[["start"]],
+        end = region[["end"]],
+        n_bins = n_bins,
+        stat = stat,
+        sample_ids = sample_id,
+        use_zoom = TRUE
+      )
+      bw_benchmark_warmup(benchmark_fun, warmup)
       for (iteration in seq_len(iterations)) {
-        measurement <- bw_benchmark_measure(
-          function() stats_bwg(
-            lazy_track,
-            chrom = region[["chrom"]],
-            start = region[["start"]],
-            end = region[["end"]],
-            n_bins = n_bins,
-            stat = stat,
-            sample_ids = sample_id,
-            use_zoom = TRUE
-          ),
-          warmup = warmup
-        )
+        measurement <- bw_benchmark_measure(benchmark_fun, warmup = 0L)
         stat_source <- NA_character_
         resolution <- NA_real_
         if (!is.null(measurement$value) && is.data.frame(measurement$value)) {
@@ -242,20 +272,19 @@ benchmark_bwg <- function(
         ))
         next
       }
+      benchmark_fun <- function() stats_bwg(
+        lazy_track,
+        chrom = region[["chrom"]],
+        start = region[["start"]],
+        end = region[["end"]],
+        n_bins = n_bins,
+        stat = stat,
+        sample_ids = sample_id,
+        use_zoom = FALSE
+      )
+      bw_benchmark_warmup(benchmark_fun, warmup)
       for (iteration in seq_len(iterations)) {
-        measurement <- bw_benchmark_measure(
-          function() stats_bwg(
-            lazy_track,
-            chrom = region[["chrom"]],
-            start = region[["start"]],
-            end = region[["end"]],
-            n_bins = n_bins,
-            stat = stat,
-            sample_ids = sample_id,
-            use_zoom = FALSE
-          ),
-          warmup = warmup
-        )
+        measurement <- bw_benchmark_measure(benchmark_fun, warmup = 0L)
         add_row(bw_benchmark_result_row(
           measurement,
           operation = "stats_full",
@@ -292,11 +321,10 @@ benchmark_bwg <- function(
           result = "track"
         )
       })
+      benchmark_fun <- function() merge_bwg(tracks = merge_tracks, method = "auto")
+      bw_benchmark_warmup(benchmark_fun, warmup)
       for (iteration in seq_len(iterations)) {
-        measurement <- bw_benchmark_measure(
-          function() merge_bwg(tracks = merge_tracks, method = "auto"),
-          warmup = warmup
-        )
+        measurement <- bw_benchmark_measure(benchmark_fun, warmup = 0L)
         add_row(bw_benchmark_result_row(
           measurement,
           operation = "merge",
@@ -329,6 +357,11 @@ benchmark_bwg <- function(
         next
       }
 
+      bw_benchmark_progress(
+        verbose,
+        "materialize write input ", region[["region_id"]],
+        " (", format(region[["bases"]], big.mark = ",", scientific = FALSE), " bp)"
+      )
       write_track <- retrieve_bwg(
         lazy_track,
         chrom = region[["chrom"]],
@@ -352,10 +385,78 @@ benchmark_bwg <- function(
         next
       }
       input_metrics <- bw_benchmark_write_input_metrics(write_track)
+      if (input_metrics$input_intervals > write_max_intervals) {
+        for (variant in c("zoom_off", "zoom_on")) {
+          add_row(bw_benchmark_skipped_row(
+            operation = "write",
+            variant = variant,
+            file_mb = file_mb,
+            region = region,
+            message = paste0(
+              "Region contains ", format(input_metrics$input_intervals, big.mark = ","),
+              " intervals, exceeding `write_max_intervals` (",
+              format(write_max_intervals, big.mark = ","), ")."
+            )
+          ))
+        }
+        bw_benchmark_progress(
+          verbose,
+          "skip ", region[["region_id"]], ": ",
+          format(input_metrics$input_intervals, big.mark = ","),
+          " intervals exceed write_max_intervals"
+        )
+        rm(write_track)
+        invisible(gc())
+        next
+      }
 
       for (zoom_value in c(FALSE, TRUE)) {
         variant <- if (isTRUE(zoom_value)) "zoom_on" else "zoom_off"
-        for (iteration in seq_len(iterations)) {
+        if (isTRUE(zoom_value) &&
+            input_metrics$input_intervals > write_zoom_max_intervals) {
+          add_row(bw_benchmark_skipped_row(
+            operation = "write",
+            variant = variant,
+            file_mb = file_mb,
+            region = region,
+            message = paste0(
+              "Region contains ", format(input_metrics$input_intervals, big.mark = ","),
+              " intervals, exceeding `write_zoom_max_intervals` (",
+              format(write_zoom_max_intervals, big.mark = ","), ")."
+            )
+          ))
+          bw_benchmark_progress(
+            verbose,
+            "skip ", region[["region_id"]], " ", variant, ": ",
+            format(input_metrics$input_intervals, big.mark = ","),
+            " intervals exceed write_zoom_max_intervals"
+          )
+          next
+        }
+
+        bw_benchmark_progress(
+          verbose,
+          "write ", region[["region_id"]], " ", variant,
+          " (", format(input_metrics$input_intervals, big.mark = ","), " intervals; ",
+          write_warmup, " warmup + ", write_iterations, " timed)"
+        )
+
+        write_once <- function() {
+          run_dir <- tempfile(paste0("bwtools_benchmark_write_", variant, "_"))
+          dir.create(run_dir, recursive = TRUE, showWarnings = FALSE)
+          on.exit(unlink(run_dir, recursive = TRUE, force = TRUE), add = TRUE)
+          write_bwg(
+            write_track,
+            outdir = run_dir,
+            format = "bigwig",
+            sample_ids = sample_id,
+            overwrite = TRUE,
+            zoom = zoom_value
+          )
+        }
+        bw_benchmark_warmup(write_once, write_warmup)
+
+        for (iteration in seq_len(write_iterations)) {
           run_dir <- tempfile(paste0("bwtools_benchmark_write_", variant, "_"))
           dir.create(run_dir, recursive = TRUE, showWarnings = FALSE)
           measurement <- bw_benchmark_measure(
@@ -367,7 +468,7 @@ benchmark_bwg <- function(
               overwrite = TRUE,
               zoom = zoom_value
             ),
-            warmup = warmup
+            warmup = 0L
           )
           output_mb <- NA_real_
           if (!is.null(measurement$value) && is.data.frame(measurement$value) &&
@@ -395,6 +496,12 @@ benchmark_bwg <- function(
               "is materialized before timing write_bwg()."
             )
           ))
+          bw_benchmark_progress(
+            verbose,
+            "done ", region[["region_id"]], " ", variant,
+            " iteration ", iteration, "/", write_iterations,
+            " in ", format(round(measurement$elapsed_sec, 2), nsmall = 2), " s"
+          )
           unlink(run_dir, recursive = TRUE, force = TRUE)
         }
       }
@@ -404,12 +511,11 @@ benchmark_bwg <- function(
   }
 
   if ("read_memory" %in% operations) {
+    benchmark_fun <- function() read_bwg(file, sample_ids = sample_id, mode = "memory")
+    bw_benchmark_warmup(benchmark_fun, warmup)
     for (iteration in seq_len(iterations)) {
       bw_benchmark_clear_metadata_cache(file)
-      measurement <- bw_benchmark_measure(
-        function() read_bwg(file, sample_ids = sample_id, mode = "memory"),
-        warmup = warmup
-      )
+      measurement <- bw_benchmark_measure(benchmark_fun, warmup = 0L)
       add_row(bw_benchmark_result_row(
         measurement,
         operation = "read_memory",
@@ -444,6 +550,11 @@ benchmark_bwg <- function(
     operations = operations,
     full_stats_max_bases = full_stats_max_bases,
     write_max_bases = write_max_bases,
+    write_max_intervals = write_max_intervals,
+    write_zoom_max_intervals = write_zoom_max_intervals,
+    write_iterations = write_iterations,
+    write_warmup = write_warmup,
+    verbose = verbose,
     writer_metric = paste(
       "write timing excludes region retrieval; input_payload_mb estimates the",
       "uncompressed primary type-1 BigWig data payload and excludes indexes/zoom"

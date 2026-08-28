@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-29
-# Version: dev003
+# Version: dev004
 # Function: Provide internal helpers for large BigWig benchmarking
 # Input: Benchmark configuration and measured R expressions
 # Output: Normalized regions, timing metrics, and benchmark summaries
@@ -219,6 +219,24 @@ bw_benchmark_write_input_metrics <- function(x) {
     input_covered_bases = as.numeric(covered_bases),
     input_data_blocks = as.integer(data_blocks)
   )
+}
+
+
+bw_benchmark_warmup <- function(fun, warmup) {
+  if (warmup < 1L) {
+    return(invisible(NULL))
+  }
+  for (i in seq_len(warmup)) {
+    try(fun(), silent = TRUE)
+  }
+  invisible(NULL)
+}
+
+bw_benchmark_progress <- function(verbose, ...) {
+  if (isTRUE(verbose)) {
+    message("[bwTools benchmark] ", paste0(..., collapse = ""))
+  }
+  invisible(NULL)
 }
 
 bw_benchmark_measure <- function(fun, warmup = 0L) {

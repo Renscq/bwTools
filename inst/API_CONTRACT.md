@@ -1,6 +1,6 @@
 # bwTools public API contract
 
-Version: **schema 2 / bwTools 0.7.3**
+Version: **schema 2 / bwTools 0.7.4**
 
 Downstream packages should treat the following as the stable integration
 boundary:
@@ -76,9 +76,11 @@ bwToolsBenchmark
 The benchmark does not alter the `BwgTrack` schema and is not required for
 normal downstream integration. Default profiling avoids full-memory BigWig
 loading. Exact statistics above `full_stats_max_bases` are recorded as skipped. Optional
-writer profiling is bounded by `write_max_bases`, profiles each selected region
-with zoom disabled and enabled, and records writer-specific throughput and
-output-size diagnostics. Writer timing excludes region retrieval. Summary rows for
+writer profiling is bounded by genomic span (`write_max_bases`) and interval
+density (`write_max_intervals`). The more expensive zoom path has an independent
+`write_zoom_max_intervals` guard. Writer profiling uses independent conservative
+`write_iterations`/`write_warmup` controls and can emit progress messages. Writer
+timing excludes region retrieval. Summary rows for
 `zoom_on` include elapsed-time and output-size overhead relative to the matching
 `zoom_off` region. Peak-memory reporting is an approximate R heap maximum from `gc()` rather than
 process RSS, and package-metadata-cold runs do not clear the operating-system
