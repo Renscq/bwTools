@@ -4,17 +4,19 @@
 \alias{zoominfo_bwg}
 \title{Return BigWig zoom-level metadata}
 \usage{
-zoominfo_bwg(x)
+zoominfo_bwg(x, sample_ids = NULL)
 }
 \arguments{
-\item{x}{A local BigWig path or a \code{BwgTrack}-compatible object.}
+\item{x}{A validated \code{BwgTrack} object.}
+
+\item{sample_ids}{Optional sample IDs. Defaults to all samples.}
 }
 \value{
-A data.table containing \code{level}, \code{data_offset}, and \code{index_offset}.
-For \code{BwgTrack} input, a \code{sample_id} column is added.
+A data.table containing \code{sample_id}, \code{level}, \code{data_offset}, and
+\code{index_offset}.
 }
 \description{
-Returns the zoom reduction levels stored in a local BigWig file. For a
-\code{BwgTrack} object, zoom metadata are returned for each BigWig-backed sample.
-WIG and bedGraph sources do not contain BigWig zoom levels.
+Returns stored zoom reduction levels for BigWig-backed samples in a
+standardized \code{BwgTrack}. WIG, bedGraph, and memory-only samples do not have
+BigWig zoom levels.
 }

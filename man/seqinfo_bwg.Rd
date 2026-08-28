@@ -2,16 +2,19 @@
 % Please edit documentation in R/retrieve-bwg.R
 \name{seqinfo_bwg}
 \alias{seqinfo_bwg}
-\title{Return chromosome metadata}
+\title{Return sample-specific chromosome metadata}
 \usage{
-seqinfo_bwg(x)
+seqinfo_bwg(x, sample_ids = NULL)
 }
 \arguments{
-\item{x}{A local BigWig path or a \code{BwgTrack}-compatible object.}
+\item{x}{A validated \code{BwgTrack} object.}
+
+\item{sample_ids}{Optional sample IDs. Defaults to all samples.}
 }
 \value{
-A data.table containing chromosome metadata.
+A copy of the standardized \code{sample_id}, \code{chrom}, and \code{length}
+metadata table.
 }
 \description{
-Return chromosome metadata
+Return sample-specific chromosome metadata
 }

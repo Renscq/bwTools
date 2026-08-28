@@ -1,16 +1,16 @@
 # Author: Rensc
-# Date: 2026-08-27
-# Version: dev001
+# Date: 2026-08-28
+# Version: dev002
 # Function: Detect supported genomic signal formats
 # Input: Local file path
-# Output: Format name
+# Output: Standardized format name
 
 #' Detect genomic signal file format
 #'
 #' @param file Local signal file path.
 #' @return One of `bigwig`, `wig`, or `bedgraph`.
 #' @export
-bw_detect_format <- function(file) {
+detect_bwg_format <- function(file) {
   file <- bw_validate_local_file(file)
   lower <- tolower(basename(file))
   lower <- sub("\\.(gz|bgz)$", "", lower)
@@ -36,7 +36,11 @@ bw_detect_format <- function(file) {
     }
   }
 
-  text_con <- if (grepl("\\.(gz|bgz)$", tolower(file))) gzfile(file, open = "rt") else file(file, open = "rt")
+  text_con <- if (grepl("\\.(gz|bgz)$", tolower(file))) {
+    gzfile(file, open = "rt")
+  } else {
+    base::file(file, open = "rt")
+  }
   on.exit(close(text_con), add = TRUE)
   lines <- readLines(text_con, n = 50L, warn = FALSE)
   lines <- trimws(lines)

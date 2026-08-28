@@ -7,26 +7,28 @@
 read_bwg(
   files,
   format = c("auto", "bigwig", "wig", "bedgraph"),
-  sample_names = NULL,
+  sample_ids = NULL,
   strand = "*",
-  mode = c("memory", "lazy")
+  mode = c("auto", "memory", "lazy")
 )
 }
 \arguments{
 \item{files}{One or more local BigWig, WIG, or bedGraph files.}
 
-\item{format}{Input format. Use \code{auto} to detect each file independently.}
+\item{format}{Input format. \code{auto} detects each file independently.}
 
-\item{sample_names}{Optional sample names.}
+\item{sample_ids}{Optional sample IDs. Defaults to input file stems.}
 
-\item{strand}{Strand labels associated with input files.}
+\item{strand}{Strand labels associated with input files. Values must be \code{+},
+\code{-}, or \code{*}.}
 
-\item{mode}{\code{memory} loads records into memory. \code{lazy} is currently supported
-for BigWig inputs only and performs indexed region retrieval on demand.}
+\item{mode}{Loading mode. \code{auto} uses lazy access when all inputs are BigWig
+and memory mode otherwise. \code{lazy} is supported for BigWig inputs only.}
 }
 \value{
-A \code{BwgTrack}-compatible object.
+A validated \code{BwgTrack} object.
 }
 \description{
-Read genomic signal tracks
+Reads one or more local BigWig, WIG, or bedGraph files into the standardized
+bwTools \code{BwgTrack} contract.
 }

@@ -16,9 +16,9 @@ merge_bwg(
 )
 }
 \arguments{
-\item{...}{Two or more \code{BwgTrack}-compatible objects.}
+\item{...}{Two or more validated \code{BwgTrack} objects.}
 
-\item{tracks}{Optional list of \code{BwgTrack}-compatible objects. Use either
+\item{tracks}{Optional list of validated \code{BwgTrack} objects. Use either
 \code{...} or \code{tracks}.}
 
 \item{method}{Merge strategy. \code{auto} performs conservative, non-arithmetic

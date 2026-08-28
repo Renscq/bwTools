@@ -1,7 +1,9 @@
 test_that("native BigWig reader returns chromosome metadata", {
   file <- test_path("fixtures", "bwtools_reader_test.bigwig")
-  observed <- seqinfo_bwg(file)
+  track <- read_bwg(file, format = "bigwig", sample_ids = "sampleA", mode = "lazy")
+  observed <- seqinfo_bwg(track)
   expected <- data.table::data.table(
+    sample_id = "sampleA",
     chrom = c("chr1", "chr2"),
     length = c(1000L, 500L)
   )
@@ -14,7 +16,7 @@ test_that("native BigWig reader returns 1-based closed intervals", {
   track <- read_bwg(
     file,
     format = "bigwig",
-    sample_names = "sampleA",
+    sample_ids = "sampleA",
     mode = "lazy"
   )
   observed <- retrieve_bwg(track, "chr1", 1L, 200L)

@@ -9,7 +9,7 @@ test_that("bundled example survives WIG round-trip", {
   source <- read_bwg(
     bedgraph_file,
     format = "bedgraph",
-    sample_names = "example",
+    sample_ids = "example",
     mode = "memory"
   )
 
@@ -26,7 +26,7 @@ test_that("bundled example survives WIG round-trip", {
   observed <- read_bwg(
     written$file,
     format = "wig",
-    sample_names = "example",
+    sample_ids = "example",
     mode = "memory"
   )
 

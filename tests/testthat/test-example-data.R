@@ -31,8 +31,10 @@ test_that("bundled BigWig example has the documented chromosome lengths", {
     mustWork = TRUE
   )
 
-  observed <- seqinfo_bwg(bw_file)
+  track <- read_bwg(bw_file, format = "bigwig", sample_ids = "example", mode = "lazy")
+  observed <- seqinfo_bwg(track)
   expected <- data.table::data.table(
+    sample_id = "example",
     chrom = c("chr1", "chr2", "chr3"),
     length = c(10000L, 8000L, 5000L)
   )
@@ -57,13 +59,13 @@ test_that("bundled BigWig and bedGraph agree for a representative region", {
   bw_track_obj <- read_bwg(
     bw_file,
     format = "bigwig",
-    sample_names = "example",
+    sample_ids = "example",
     mode = "lazy"
   )
   bedgraph_track_obj <- read_bwg(
     bedgraph_file,
     format = "bedgraph",
-    sample_names = "example",
+    sample_ids = "example",
     mode = "memory"
   )
 

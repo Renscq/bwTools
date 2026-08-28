@@ -7,7 +7,7 @@ test_that("WIG writing keeps chromosome groups isolated", {
     value = c(1.5, -2.25, 3.75),
     strand = "*"
   )
-  track <- bw_track(
+  track <- bwg_track(
     samples = data.table::data.table(sample_id = "sampleA", strand = "*"),
     data = signal,
     meta = list(mode = "memory")
@@ -29,7 +29,7 @@ test_that("WIG writing keeps chromosome groups isolated", {
   observed <- read_bwg(
     written$file,
     format = "wig",
-    sample_names = "sampleA",
+    sample_ids = "sampleA",
     mode = "memory"
   )$data
 
@@ -66,7 +66,7 @@ test_that("memory statistics isolate the requested chromosome", {
     value = c(1, 100),
     strand = "*"
   )
-  track <- bw_track(
+  track <- bwg_track(
     samples = data.table::data.table(sample_id = "sampleA", strand = "*"),
     data = signal,
     meta = list(mode = "memory")

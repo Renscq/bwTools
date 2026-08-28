@@ -1,4 +1,4 @@
-test_that("bw_track creates a GeneTrackR-compatible object", {
+test_that("bwg_track creates a standardized object", {
   samples <- data.table::data.table(
     sample_id = "sampleA",
     file = "sample.bigwig",
@@ -13,7 +13,7 @@ test_that("bw_track creates a GeneTrackR-compatible object", {
     value = c(1, 2),
     strand = "+"
   )
-  x <- bw_track(samples, signal, meta = list(mode = "memory"))
+  x <- bwg_track(samples, signal, meta = list(mode = "memory"))
   expect_s3_class(x, "BwgTrack")
   expect_true(is_bwg_track(x))
   expect_s3_class(x$data, "data.table")
@@ -35,7 +35,7 @@ test_that("memory retrieval filters and clips the requested region", {
     value = c(1, 2, 3),
     strand = "+"
   )
-  x <- bw_track(samples, signal, meta = list(mode = "memory"))
+  x <- bwg_track(samples, signal, meta = list(mode = "memory"))
   observed <- retrieve_bwg(x, "chr1", 5L, 25L)
   expect_equal(nrow(observed), 2L)
   expect_equal(observed$start, c(5L, 20L))

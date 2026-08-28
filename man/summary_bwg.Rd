@@ -2,16 +2,16 @@
 % Please edit documentation in R/retrieve-bwg.R
 \name{summary_bwg}
 \alias{summary_bwg}
-\title{Summarize a BwgTrack-compatible object}
+\title{Summarize a BwgTrack object}
 \usage{
-summary_bwg(object)
+summary_bwg(x)
 }
 \arguments{
-\item{object}{A \code{BwgTrack}-compatible object.}
+\item{x}{A validated \code{BwgTrack} object.}
 }
 \value{
-A named list with object-level counts.
+A one-row data.table describing the object contract and dimensions.
 }
 \description{
-Summarize a BwgTrack-compatible object
+Summarize a BwgTrack object
 }

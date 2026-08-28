@@ -5,18 +5,18 @@
 \title{Retrieve signal intervals}
 \usage{
 retrieve_bwg(
-  object,
+  x,
   chrom = NULL,
   start = NULL,
   end = NULL,
-  samples = NULL,
-  strand = "ignore",
   regions = NULL,
+  sample_ids = NULL,
+  strand = NULL,
   result = c("data", "track")
 )
 }
 \arguments{
-\item{object}{A \code{BwgTrack}-compatible object.}
+\item{x}{A validated \code{BwgTrack} object.}
 
 \item{chrom}{Optional chromosome name for a single-region query.}
 
@@ -24,28 +24,23 @@ retrieve_bwg(
 
 \item{end}{Optional end coordinate for a single-region query.}
 
-\item{samples}{Optional sample IDs. By default all samples are considered.}
-
-\item{strand}{Optional strand selector: \code{+}, \code{-}, \code{*}, \code{both}, or \code{ignore}.}
-
 \item{regions}{Optional data.frame or data.table containing \code{chrom}, \code{start},
 and \code{end} columns. Use either \code{regions} or \code{chrom}/\code{start}/\code{end}.}
 
-\item{result}{Result type: \code{data} returns the in-memory signal data.table;
-\code{track} returns a memory-mode \code{BwgTrack} containing the selected samples,
-signal, and chromosome metadata.}
+\item{sample_ids}{Optional sample IDs. Defaults to all samples.}
+
+\item{strand}{Optional exact strand selector: \code{+}, \code{-}, or \code{*}. \code{NULL}
+performs no strand filtering.}
+
+\item{result}{Result type. \code{data} returns the standardized signal data.table;
+\code{track} returns a memory-mode \code{BwgTrack}.}
 }
 \value{
-A signal data.table or a memory-mode \code{BwgTrack}, depending on
-\code{result}.
+A signal data.table or memory-mode \code{BwgTrack}.
 }
 \description{
-Retrieves one or more genomic regions from a \code{BwgTrack}-compatible object.
+Retrieves one or more genomic regions from a standardized \code{BwgTrack}.
 Query coordinates are 1-based closed. Overlapping or directly adjacent
 regions are merged before retrieval, and signal intervals crossing query
 boundaries are clipped without rebasing genomic coordinates.
-
-By default a signal data.table is returned for backward compatibility. Use
-\code{result = "track"} when the retrieved data should remain in the standard
-\code{BwgTrack} contract, for example before passing it to \code{write_bwg()}.
 }

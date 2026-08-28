@@ -1,3 +1,64 @@
+# bwTools 0.6.1
+
+## Standardized public API
+
+- Standardized object-taking public functions on the primary argument name `x`.
+- Standardized sample identifiers and sample selection on `sample_ids`.
+- Renamed the public constructor from `bw_track()` to `bwg_track()`.
+- Renamed format detection from `bw_detect_format()` to
+  `detect_bwg_format()`.
+- Added `validate_bwg()` for strict downstream-package contract validation.
+- Added `samples_bwg()` as the public sample-metadata accessor.
+- Added `metadata_bwg()` as the public schema, operation, and provenance
+  metadata accessor.
+- Restricted `seqinfo_bwg()`, `zoominfo_bwg()`, and `stats_bwg()` to validated
+  BwgTrack input so file I/O remains centralized in `read_bwg()`.
+- Changed `summary_bwg()` to return a one-row data.table with stable fields.
+
+## BwgTrack schema v2
+
+- Standardized `samples` core columns as `sample_id`, `file`, `format`,
+  `strand`, and `has_strand`.
+- Standardized memory signal columns as `sample_id`, `chrom`, `start`, `end`,
+  `value`, and `strand`.
+- Standardized chromosome metadata as `sample_id`, `chrom`, and `length`.
+- Standardized required metadata fields as `coordinate`, `schema_version`,
+  `backend`, and `mode`.
+- Added strict validation for sample IDs, interval coordinates, finite signal
+  values, strand values, chromosome lengths, lazy BigWig backing files, and
+  metadata consistency.
+- Fixed schema-v2 core column types so downstream packages receive deterministic
+  character, logical, integer, and numeric fields after `bwg_track()` normalization.
+- `bwg_track()` now normalizes missing standard sample columns and expands
+  sample-independent seqinfo across samples.
+
+## Standardized loading behavior
+
+- Added `mode = "auto"` as the default for `read_bwg()`.
+- All-BigWig input defaults to lazy indexed access.
+- WIG and bedGraph input defaults to memory mode.
+- Explicit `mode = "memory"` and `mode = "lazy"` remain available.
+
+## Integration contract
+
+- Added `inst/API_CONTRACT.md` describing the supported downstream-package
+  integration boundary.
+- Reworked `README.qmd` around the standardized public workflow and return
+  contracts.
+- Added API contract regression tests covering schema normalization, strict
+  validation, stable return columns, sample and metadata accessors, auto loading
+  mode, malformed merge inputs, and object-only analysis interfaces.
+
+## Breaking changes
+
+- Removed public `bw_track()`; use `bwg_track()`.
+- Removed public `bw_detect_format()`; use `detect_bwg_format()`.
+- Replaced `sample_names` with `sample_ids` in `read_bwg()`.
+- Replaced sample selectors named `samples` with `sample_ids`.
+- `seqinfo_bwg()`, `zoominfo_bwg()`, and `stats_bwg()` no longer accept file
+  paths directly. Use `read_bwg()` first.
+- `summary_bwg()` now returns a one-row data.table instead of a named list.
+
 # bwTools 0.5.1
 
 - Unified direct merging and arithmetic aggregation under the single public `merge_bwg()` interface.
@@ -96,7 +157,7 @@
 
 - Fixed package-internal `data.table` awareness so `[.data.table` no longer falls back to data.frame semantics during `devtools::test()` or package checks.
 - Replaced package-internal `:=` update expressions with `data.table::set()` for explicit namespace-safe by-reference assignment.
-- Copy user-supplied `data.table` inputs in `bw_track()` before normalization to avoid modifying caller-owned objects by reference.
+- Copy user-supplied `data.table` inputs in `bwg_track()` before normalization to avoid modifying caller-owned objects by reference.
 - Added a regression test for the `.datatable.aware` package marker.
 
 # bwTools 0.1.1

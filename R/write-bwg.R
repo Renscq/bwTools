@@ -1,7 +1,7 @@
 # Author: Rensc
 # Date: 2026-08-27
-# Version: dev003
-# Function: Write BwgTrack-compatible objects to BigWig, WIG, or bedGraph files
+# Version: dev004
+# Function: Write standardized BwgTrack objects to BigWig, WIG, or bedGraph files
 # Input: BwgTrack-compatible object, output format, and chromosome sizes
 # Output: One signal file per selected sample
 
@@ -220,41 +220,39 @@ bw_write_lazy_copy <- function(sample_tbl, outdir, format, overwrite) {
 #' Write genomic signal tracks
 #'
 #' @description
-#' Writes a `BwgTrack`-compatible object to BigWig, WIG, or bedGraph files.
-#' BigWig files are written directly by the native R backend and do not require
-#' UCSC command-line programs, Rcpp, or external BigWig libraries.
+#' Write genomic signal tracks
 #'
-#' @param object A `BwgTrack`-compatible object.
+#' Writes a standardized `BwgTrack` to BigWig, WIG, or bedGraph files. File
+#' persistence is handled only by this function; retrieval, merging, and
+#' statistics never write files.
+#'
+#' @param x A validated `BwgTrack` object.
 #' @param outdir Output directory.
 #' @param format Output format: `bigwig`, `wig`, or `bedgraph`.
-#' @param samples Optional sample IDs. By default all samples are written.
+#' @param sample_ids Optional sample IDs. Defaults to all samples.
 #' @param chrom_sizes Chromosome sizes for BigWig output. May be a two-column
 #'   file or table. If omitted, complete chromosome lengths are taken from
-#'   `object$seqinfo` when available.
+#'   `seqinfo_bwg(x)` when available.
 #' @param overwrite Whether existing output files may be replaced.
 #' @param compress Whether WIG or bedGraph output should be gzip-compressed.
 #'   BigWig data blocks are always compressed internally by the file format.
 #' @param zoom Whether native BigWig output should include zoom summary levels.
-#'   Ignored for WIG, bedGraph, and direct lazy BigWig file copies.
 #' @param max_zoom_levels Maximum number of BigWig zoom levels to create when
 #'   `zoom = TRUE`.
-#' @return Invisibly returns a data.table containing sample IDs, output files,
-#'   and formats.
+#' @return Invisibly returns a data.table with `sample_id`, `file`, and `format`.
 #' @export
 write_bwg <- function(
-  object,
+  x,
   outdir,
   format = c("bigwig", "wig", "bedgraph"),
-  samples = NULL,
+  sample_ids = NULL,
   chrom_sizes = NULL,
   overwrite = FALSE,
   compress = FALSE,
   zoom = TRUE,
   max_zoom_levels = 10L
 ) {
-  if (!is_bwg_track(object)) {
-    bw_stop("`object` must be a BwgTrack-compatible object.")
-  }
+  bw_assert_bwg(x)
   format <- match.arg(format)
   if (!is.character(outdir) || length(outdir) != 1L || is.na(outdir) || !nzchar(outdir)) {
     bw_stop("`outdir` must be a single non-empty path.")
@@ -262,53 +260,53 @@ write_bwg <- function(
   dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
   outdir <- normalizePath(outdir, winslash = "/", mustWork = TRUE)
 
-  sample_tbl <- data.table::copy(data.table::as.data.table(object$samples))
-  if (!is.null(samples)) {
-    selected <- as.character(samples)
-    missing_samples <- setdiff(selected, sample_tbl$sample_id)
-    if (length(missing_samples) > 0L) {
-      bw_stop(paste0("Unknown sample IDs: ", paste(missing_samples, collapse = ", "), "."))
-    }
-    sample_tbl <- sample_tbl[sample_tbl[["sample_id"]] %in% selected]
-  }
+  sample_tbl <- bw_select_samples(x, sample_ids = sample_ids)
   if (nrow(sample_tbl) < 1L) {
     bw_stop("No samples were selected for writing.")
   }
 
-  if (is.null(object$data)) {
+  if (is.null(x$data)) {
     return(invisible(bw_write_lazy_copy(sample_tbl, outdir, format, overwrite)))
   }
 
-  dt <- data.table::copy(data.table::as.data.table(object$data))
-  dt <- dt[dt[["sample_id"]] %in% sample_tbl$sample_id]
+  dt <- data.table::copy(data.table::as.data.table(x$data))
+  dt <- dt[which(dt[["sample_id"]] %in% sample_tbl[["sample_id"]])]
   if (nrow(dt) < 1L) {
     bw_stop("No in-memory signal records are available for the selected samples.")
   }
 
   out <- vector("list", nrow(sample_tbl))
   for (i in seq_len(nrow(sample_tbl))) {
-    sid <- sample_tbl$sample_id[i]
-    signal <- dt[dt[["sample_id"]] == sid]
+    sid <- sample_tbl[["sample_id"]][i]
+    signal <- dt[which(dt[["sample_id"]] == sid)]
     if (nrow(signal) < 1L) next
 
-    if (format == "bigwig") {
-      cs <- bw_resolve_chrom_sizes(object, chrom_sizes, sid)
+    if (identical(format, "bigwig")) {
+      cs <- bw_resolve_chrom_sizes(x, chrom_sizes, sid)
       signal <- bw_validate_signal_for_write(signal, cs)
       file <- file.path(outdir, paste0(sid, ".bigwig"))
       bw_check_output_file(file, overwrite)
       bw_write_bigwig_file(
-        signal, cs, file,
+        signal,
+        cs,
+        file,
         zoom = zoom,
         max_zoom_levels = max_zoom_levels
       )
-    } else if (format == "bedgraph") {
-      file <- file.path(outdir, paste0(sid, ".bedgraph", if (isTRUE(compress)) ".gz" else ""))
+    } else if (identical(format, "bedgraph")) {
+      file <- file.path(
+        outdir,
+        paste0(sid, ".bedgraph", if (isTRUE(compress)) ".gz" else "")
+      )
       bw_check_output_file(file, overwrite)
       signal <- data.table::copy(signal)
       data.table::setorderv(signal, c("chrom", "start", "end"))
       bw_write_bedgraph_table(signal, file, compress = compress)
     } else {
-      file <- file.path(outdir, paste0(sid, ".wig", if (isTRUE(compress)) ".gz" else ""))
+      file <- file.path(
+        outdir,
+        paste0(sid, ".wig", if (isTRUE(compress)) ".gz" else "")
+      )
       bw_check_output_file(file, overwrite)
       signal <- data.table::copy(signal)
       data.table::setorderv(signal, c("chrom", "start", "end"))

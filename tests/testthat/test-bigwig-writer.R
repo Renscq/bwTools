@@ -15,7 +15,7 @@ test_that("native BigWig writer round-trips bundled example signal", {
   source <- read_bwg(
     bedgraph_file,
     format = "bedgraph",
-    sample_names = "example",
+    sample_ids = "example",
     mode = "memory"
   )
   outdir <- tempfile(pattern = "bwtools_writer_")
@@ -35,7 +35,7 @@ test_that("native BigWig writer round-trips bundled example signal", {
   observed <- read_bwg(
     written$file,
     format = "bigwig",
-    sample_names = "example",
+    sample_ids = "example",
     mode = "lazy"
   )
   expected_seqinfo <- data.table::data.table(
@@ -68,7 +68,7 @@ test_that("BigWig writer can use complete BwgTrack seqinfo without chrom_sizes",
   source <- read_bwg(
     bw_file,
     format = "bigwig",
-    sample_names = "example",
+    sample_ids = "example",
     mode = "memory"
   )
   outdir <- tempfile(pattern = "bwtools_writer_seqinfo_")
@@ -80,7 +80,8 @@ test_that("BigWig writer can use complete BwgTrack seqinfo without chrom_sizes",
     overwrite = TRUE
   )
   expect_true(file.exists(written$file))
-  expect_equal(seqinfo_bwg(written$file)$length, c(10000L, 8000L, 5000L))
+  observed <- read_bwg(written$file, format = "bigwig", sample_ids = "example", mode = "lazy")
+  expect_equal(seqinfo_bwg(observed)$length, c(10000L, 8000L, 5000L))
 })
 
 test_that("BigWig writer rejects overlaps and chromosome overflow", {
@@ -93,7 +94,7 @@ test_that("BigWig writer rejects overlaps and chromosome overflow", {
     value = c(1, 2),
     strand = "*"
   )
-  overlap_track <- bw_track(samples, overlap_signal, meta = list(mode = "memory"))
+  overlap_track <- bwg_track(samples, overlap_signal, meta = list(mode = "memory"))
   expect_error(
     write_bwg(
       overlap_track,
@@ -112,7 +113,7 @@ test_that("BigWig writer rejects overlaps and chromosome overflow", {
     value = 1,
     strand = "*"
   )
-  overflow_track <- bw_track(samples, overflow_signal, meta = list(mode = "memory"))
+  overflow_track <- bwg_track(samples, overflow_signal, meta = list(mode = "memory"))
   expect_error(
     write_bwg(
       overflow_track,
@@ -133,7 +134,7 @@ test_that("native writer preserves bedGraph and WIG signal intervals", {
     value = c(1.5, -2.25, 3.75),
     strand = "*"
   )
-  track <- bw_track(
+  track <- bwg_track(
     samples = data.table::data.table(sample_id = "sampleA", strand = "*"),
     data = signal,
     meta = list(mode = "memory")
@@ -148,7 +149,7 @@ test_that("native writer preserves bedGraph and WIG signal intervals", {
     observed <- read_bwg(
       written$file,
       format = format,
-      sample_names = "sampleA",
+      sample_ids = "sampleA",
       mode = "memory"
     )$data
     expect_equal(observed, expected, tolerance = 1e-10)
@@ -165,7 +166,7 @@ test_that("lazy BigWig tracks can be copied without decoding", {
   source <- read_bwg(
     bw_file,
     format = "bigwig",
-    sample_names = "example",
+    sample_ids = "example",
     mode = "lazy"
   )
   outdir <- tempfile(pattern = "bwtools_lazy_copy_")
@@ -192,7 +193,7 @@ test_that("native writer supports multi-level chromosome and R-tree indexes", {
     value = as.numeric((seq_len(n_chrom) %% 7L) - 3L),
     strand = "*"
   )
-  track <- bw_track(samples, signal, meta = list(mode = "memory"))
+  track <- bwg_track(samples, signal, meta = list(mode = "memory"))
   chrom_sizes <- data.frame(chrom = chrom, length = rep(1000L, n_chrom))
   outdir <- tempfile(pattern = "bwtools_multilevel_")
   dir.create(outdir)
@@ -204,7 +205,13 @@ test_that("native writer supports multi-level chromosome and R-tree indexes", {
     chrom_sizes = chrom_sizes,
     overwrite = TRUE
   )
-  observed_seqinfo <- seqinfo_bwg(written$file)
+  observed_track <- read_bwg(
+    written$file,
+    format = "bigwig",
+    sample_ids = "sampleA",
+    mode = "lazy"
+  )
+  observed_seqinfo <- seqinfo_bwg(observed_track)
   expect_equal(nrow(observed_seqinfo), n_chrom)
   expect_equal(observed_seqinfo$chrom[c(1L, n_chrom)], chrom[c(1L, n_chrom)])
   expect_equal(observed_seqinfo$length[c(1L, n_chrom)], c(1000L, 1000L))
@@ -212,7 +219,7 @@ test_that("native writer supports multi-level chromosome and R-tree indexes", {
   observed_first <- read_bwg(
     written$file,
     format = "bigwig",
-    sample_names = "sampleA",
+    sample_ids = "sampleA",
     mode = "lazy"
   )
   expect_equal(retrieve_bwg(observed_first, chrom[1L], 1L, 1000L)$value, signal$value[1L], tolerance = 1e-6)

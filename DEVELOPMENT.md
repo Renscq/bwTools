@@ -174,41 +174,63 @@ Implementation notes:
 - `merge_adjacent = TRUE` joins adjacent equal-valued segments after auto or arithmetic merging.
 - Weighted aggregation and additional arithmetic methods can be added later without adding another public merge function.
 
-## 0.6.x - GeneTrackR integration
+## 0.6.1 - Public API and BwgTrack contract standardization
 
-Scope:
+Status: **implemented; local R regression testing required.**
 
-- GeneTrackR imports bwTools for signal I/O.
-- Existing GeneTrackR public `read_bwg()`, `retrieve_bwg()`, `merge_bwg()`, and `write_bwg()` interfaces are retained as compatibility wrappers where practical.
-- Remove GeneTrackR's libBigWig/Rcpp signal backend and UCSC BigWig writer dependency after regression validation.
+Goals:
+
+- Freeze a single downstream-package object contract before GeneTrackR adopts
+  bwTools as a backend.
+- Standardize primary object arguments on `x`.
+- Standardize sample identifiers and selectors on `sample_ids`.
+- Use `bwg_track()` as the single public constructor.
+- Use `detect_bwg_format()` as the public format detector.
+- Add `validate_bwg()`, `samples_bwg()`, and `metadata_bwg()` for external package integration.
+- Require all analysis/accessor functions to consume BwgTrack rather than mix
+  object and file-path semantics.
+- Keep file input in `read_bwg()` and persistence in `write_bwg()`.
+- Standardize schema v2 for samples, signal data, seqinfo, and metadata.
+- Make lazy BigWig loading the safe default through `mode = "auto"`.
 
 Acceptance criteria:
 
-- Existing `plot_signal_gene()`, `plot_signal_transcript()`, `plot_signal_region()`, and `plot_tracks()` consume bwTools objects without conversion.
-- Existing GeneTrackR signal examples run with the same object contract.
+- Public API names and argument conventions are internally consistent.
+- All public BwgTrack-producing functions return schema v2 objects.
+- `validate_bwg()` detects malformed downstream objects with actionable errors.
+- Public accessors do not require direct list-field assumptions.
+- README examples use only the standardized API.
+- Old `bw_track`, `bw_detect_format`, `sample_names`, and selector `samples`
+  names are absent from the public API.
+- GeneTrackR can later integrate by depending only on documented bwTools
+  exports and `inst/API_CONTRACT.md`.
+
+## 0.7.x - Large-file performance profiling
+
+Planned:
+
+- Benchmark lazy retrieval, statistics, merge materialization, native writing,
+  and zoom generation on large RNA-seq and Ribo-seq BigWig files.
+- Optimize only measured bottlenecks.
+- Introduce streaming writer changes if peak memory requires them.
+
+## 0.8.x - Statistics and zoom refinements
+
+Planned:
+
+- Refine statistics or zoom behavior only where real workflows justify it.
+- Preserve exact/full-resolution and approximate/zoom semantics explicitly.
+
+## 0.9.x - Release hardening
+
+Planned:
+
+- Freeze the public API.
+- Normalize error classes/messages and documentation.
+- Run Linux, macOS, and Windows compatibility checks.
+- Complete large-file and malformed-file regression coverage.
 
 ## 1.0.0 - Stable release
 
-Scope:
-
-- Windows and Linux regression coverage.
-- Corrupt/truncated-file diagnostics.
-- Large-file benchmarks.
-- Public API stabilization and documentation.
-- Optional remote-range access only if it can be implemented without compromising the no-external-binary design.
-
-## 0.2.0 development validation note
-
-The BigWig v4 binary layout used by the native writer was independently checked
-against the supplied libBigWig C reader during development. Both a standard
-three-chromosome file and a synthetic 300-chromosome file exercising multi-level
-chromosome B+ trees and R-trees were readable by the reference C implementation.
-This validates the binary layout independently of bwTools' own reader. The R
-package tests remain the required runtime validation for the actual R writer.
-
-# Documentation conventions
-
-All language-tagged code fences in Markdown and QMD files must use braced
-Quarto/knitr syntax, for example `{r}`, `{bash}`, and `{text}`. Unbraced
-forms such as ` ```r`, ` ```bash`, and ` ```text` are not permitted.
-
+Release only after reader, writer, retrieval, merge, statistics, zoom, object
+contract, large-file behavior, and cross-platform installation are validated.

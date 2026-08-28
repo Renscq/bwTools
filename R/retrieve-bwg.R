@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-28
-# Version: dev003
+# Version: dev004
 # Function: Retrieve one or more genomic regions from BwgTrack-compatible objects
 # Input: BwgTrack and genomic region(s)
 # Output: In-memory signal data.table or BwgTrack subset
@@ -102,39 +102,19 @@ bw_normalize_retrieve_regions <- function(chrom = NULL, start = NULL, end = NULL
   ans[]
 }
 
-bw_select_retrieve_samples <- function(object, samples = NULL, strand = "ignore") {
-  sample_tbl <- data.table::copy(data.table::as.data.table(object$samples))
+bw_select_retrieve_samples <- function(x, sample_ids = NULL, strand = NULL) {
+  sample_tbl <- bw_select_samples(x, sample_ids = sample_ids)
 
-  if (!is.null(samples)) {
-    selected <- unique(as.character(samples))
-    if (length(selected) < 1L || anyNA(selected) || any(!nzchar(selected))) {
-      bw_stop("`samples` must contain one or more non-empty sample IDs.")
-    }
-    missing_samples <- setdiff(selected, sample_tbl[["sample_id"]])
-    if (length(missing_samples) > 0L) {
-      bw_stop(paste0(
-        "Unknown sample IDs: ",
-        paste(missing_samples, collapse = ", "),
-        "."
-      ))
-    }
-    idx <- match(selected, sample_tbl[["sample_id"]])
-    sample_tbl <- sample_tbl[idx]
+  if (is.null(strand)) {
+    return(sample_tbl[])
   }
-
-  query_strand <- as.character(strand)[1L]
-  if (is.na(query_strand) || !query_strand %in% c("+", "-", "*", "both", "ignore")) {
-    bw_stop("`strand` must be '+', '-', '*', 'both', or 'ignore'.")
+  query_strand <- as.character(strand)
+  if (length(query_strand) != 1L || is.na(query_strand) ||
+      !query_strand %in% c("+", "-", "*")) {
+    bw_stop("`strand` must be NULL, '+', '-', or '*'.")
   }
-  if (query_strand %in% c("+", "-")) {
-    idx <- which(sample_tbl[["strand"]] %in% c(query_strand, "*"))
-    sample_tbl <- sample_tbl[idx]
-  } else if (identical(query_strand, "*")) {
-    idx <- which(sample_tbl[["strand"]] == "*")
-    sample_tbl <- sample_tbl[idx]
-  }
-
-  sample_tbl[]
+  idx <- which(sample_tbl[["strand"]] == query_strand)
+  sample_tbl[idx][]
 }
 
 bw_retrieve_memory_regions <- function(object, sample_ids, regions) {
@@ -256,43 +236,35 @@ bw_retrieve_seqinfo <- function(object, sample_ids, regions) {
 
 #' Retrieve signal intervals
 #'
-#' @description
-#' Retrieves one or more genomic regions from a `BwgTrack`-compatible object.
+#' Retrieves one or more genomic regions from a standardized `BwgTrack`.
 #' Query coordinates are 1-based closed. Overlapping or directly adjacent
 #' regions are merged before retrieval, and signal intervals crossing query
 #' boundaries are clipped without rebasing genomic coordinates.
 #'
-#' By default a signal data.table is returned for backward compatibility. Use
-#' `result = "track"` when the retrieved data should remain in the standard
-#' `BwgTrack` contract, for example before passing it to `write_bwg()`.
-#'
-#' @param object A `BwgTrack`-compatible object.
+#' @param x A validated `BwgTrack` object.
 #' @param chrom Optional chromosome name for a single-region query.
 #' @param start Optional start coordinate for a single-region query.
 #' @param end Optional end coordinate for a single-region query.
-#' @param samples Optional sample IDs. By default all samples are considered.
-#' @param strand Optional strand selector: `+`, `-`, `*`, `both`, or `ignore`.
 #' @param regions Optional data.frame or data.table containing `chrom`, `start`,
 #'   and `end` columns. Use either `regions` or `chrom`/`start`/`end`.
-#' @param result Result type: `data` returns the in-memory signal data.table;
-#'   `track` returns a memory-mode `BwgTrack` containing the selected samples,
-#'   signal, and chromosome metadata.
-#' @return A signal data.table or a memory-mode `BwgTrack`, depending on
-#'   `result`.
+#' @param sample_ids Optional sample IDs. Defaults to all samples.
+#' @param strand Optional exact strand selector: `+`, `-`, or `*`. `NULL`
+#'   performs no strand filtering.
+#' @param result Result type. `data` returns the standardized signal data.table;
+#'   `track` returns a memory-mode `BwgTrack`.
+#' @return A signal data.table or memory-mode `BwgTrack`.
 #' @export
 retrieve_bwg <- function(
-  object,
+  x,
   chrom = NULL,
   start = NULL,
   end = NULL,
-  samples = NULL,
-  strand = "ignore",
   regions = NULL,
+  sample_ids = NULL,
+  strand = NULL,
   result = c("data", "track")
 ) {
-  if (!is_bwg_track(object)) {
-    bw_stop("`object` must be a BwgTrack-compatible object.")
-  }
+  bw_assert_bwg(x)
   result <- match.arg(result)
   normalized_regions <- bw_normalize_retrieve_regions(
     chrom = chrom,
@@ -301,18 +273,18 @@ retrieve_bwg <- function(
     regions = regions
   )
   sample_tbl <- bw_select_retrieve_samples(
-    object,
-    samples = samples,
+    x,
+    sample_ids = sample_ids,
     strand = strand
   )
 
   data <- if (nrow(sample_tbl) < 1L) {
     bw_empty_signal(include_sample = TRUE)
-  } else if (is.null(object$data)) {
-    bw_retrieve_lazy_regions(object, sample_tbl, normalized_regions)
+  } else if (is.null(x$data)) {
+    bw_retrieve_lazy_regions(x, sample_tbl, normalized_regions)
   } else {
     bw_retrieve_memory_regions(
-      object,
+      x,
       sample_tbl[["sample_id"]],
       normalized_regions
     )
@@ -323,18 +295,16 @@ retrieve_bwg <- function(
   }
 
   seqinfo <- bw_retrieve_seqinfo(
-    object,
+    x,
     sample_tbl[["sample_id"]],
     normalized_regions
   )
-  meta <- object$meta
-  meta$source_mode <- object$meta$mode %||%
-    if (is.null(object$data)) "lazy" else "memory"
-  meta$mode <- "memory"
+  meta <- x$meta
+  meta$source_mode <- x$meta$mode %||% if (is.null(x$data)) "lazy" else "memory"
   meta$retrieved <- TRUE
   meta$retrieval_regions <- data.table::copy(normalized_regions)
 
-  bw_track(
+  bwg_track(
     samples = sample_tbl,
     data = data,
     seqinfo = seqinfo,
@@ -342,46 +312,60 @@ retrieve_bwg <- function(
   )
 }
 
-#' Return chromosome metadata
+#' Return sample-specific chromosome metadata
 #'
-#' @param x A local BigWig path or a `BwgTrack`-compatible object.
-#' @return A data.table containing chromosome metadata.
+#' @param x A validated `BwgTrack` object.
+#' @param sample_ids Optional sample IDs. Defaults to all samples.
+#' @return A copy of the standardized `sample_id`, `chrom`, and `length`
+#'   metadata table.
 #' @export
-seqinfo_bwg <- function(x) {
-  if (is_bwg_track(x)) {
-    if (!is.null(x$seqinfo)) {
-      return(data.table::copy(data.table::as.data.table(x$seqinfo)))
-    }
-    sample_tbl <- data.table::as.data.table(x$samples)
-    if (all(sample_tbl$format == "bigwig")) {
-      out <- lapply(seq_len(nrow(sample_tbl)), function(i) {
-        z <- bw_bigwig_seqinfo(sample_tbl$file[i])
-        data.table::set(z, j = "sample_id", value = sample_tbl$sample_id[i])
-        data.table::setcolorder(z, c("sample_id", "chrom", "length"))
-        z
-      })
-      return(data.table::rbindlist(out))
-    }
-    return(data.table::data.table())
+seqinfo_bwg <- function(x, sample_ids = NULL) {
+  bw_assert_bwg(x)
+  sample_tbl <- bw_select_samples(x, sample_ids = sample_ids)
+  selected <- sample_tbl[["sample_id"]]
+
+  if (!is.null(x$seqinfo)) {
+    seqinfo <- data.table::copy(data.table::as.data.table(x$seqinfo))
+    idx <- which(seqinfo[["sample_id"]] %in% selected)
+    return(seqinfo[idx][])
   }
-  bw_bigwig_seqinfo(x)
+
+  if (nrow(sample_tbl) > 0L && all(sample_tbl[["format"]] == "bigwig")) {
+    out <- vector("list", nrow(sample_tbl))
+    for (i in seq_len(nrow(sample_tbl))) {
+      z <- bw_bigwig_seqinfo(sample_tbl[["file"]][i])
+      data.table::set(z, j = "sample_id", value = sample_tbl[["sample_id"]][i])
+      data.table::setcolorder(z, c("sample_id", "chrom", "length"))
+      out[[i]] <- z
+    }
+    return(data.table::rbindlist(out, use.names = TRUE, fill = TRUE)[])
+  }
+
+  data.table::data.table(
+    sample_id = character(),
+    chrom = character(),
+    length = integer()
+  )
 }
 
-#' Summarize a BwgTrack-compatible object
+#' Summarize a BwgTrack object
 #'
-#' @param object A `BwgTrack`-compatible object.
-#' @return A named list with object-level counts.
+#' @param x A validated `BwgTrack` object.
+#' @return A one-row data.table describing the object contract and dimensions.
 #' @export
-summary_bwg <- function(object) {
-  if (!is_bwg_track(object)) {
-    bw_stop("`object` must be a BwgTrack-compatible object.")
-  }
-  list(
-    samples = nrow(object$samples),
-    mode = object$meta$mode %||% if (is.null(object$data)) "lazy" else "memory",
-    intervals = if (is.null(object$data)) NA_integer_ else nrow(object$data),
-    chromosomes = if (is.null(object$seqinfo)) NA_integer_ else data.table::uniqueN(object$seqinfo$chrom),
-    coordinate = object$meta$coordinate %||% "1-based closed",
-    backend = object$meta$backend %||% "bwTools-native-R"
+summary_bwg <- function(x) {
+  bw_assert_bwg(x)
+  data.table::data.table(
+    samples = nrow(x$samples),
+    mode = x$meta$mode,
+    intervals = if (is.null(x$data)) NA_integer_ else nrow(x$data),
+    chromosomes = if (is.null(x$seqinfo)) {
+      NA_integer_
+    } else {
+      data.table::uniqueN(x$seqinfo[["chrom"]])
+    },
+    coordinate = x$meta$coordinate,
+    schema_version = x$meta$schema_version,
+    backend = x$meta$backend
   )
 }

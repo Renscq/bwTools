@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-28
-# Version: dev002
+# Version: dev003
 # Function: Intelligently merge or aggregate BwgTrack-compatible signal objects
 # Input: Two or more BwgTrack-compatible objects
 # Output: A memory-mode BwgTrack containing merged or aggregated signal
@@ -13,15 +13,21 @@ bw_collect_bwg_tracks <- function(..., tracks = NULL) {
     }
     dots <- tracks
   }
-  if (length(dots) == 1L && is.list(dots[[1L]]) && !is_bwg_track(dots[[1L]])) {
+  if (length(dots) == 1L && is.list(dots[[1L]]) &&
+      !inherits(dots[[1L]], "BwgTrack")) {
     dots <- dots[[1L]]
   }
   if (length(dots) < 2L) {
     bw_stop("At least two BwgTrack-compatible objects are required.")
   }
-  valid <- vapply(dots, is_bwg_track, logical(1L))
-  if (!all(valid)) {
-    bw_stop("All inputs must be BwgTrack-compatible objects.")
+  for (i in seq_along(dots)) {
+    issues <- bw_contract_issues(dots[[i]])
+    if (length(issues) > 0L) {
+      bw_stop(paste0(
+        "Input track ", i, " does not satisfy the BwgTrack contract: ",
+        issues[[1L]]
+      ))
+    }
   }
   dots
 }
@@ -699,8 +705,8 @@ bw_merge_numeric <- function(
 #' File persistence is intentionally excluded. Save the returned `BwgTrack`
 #' explicitly with `write_bwg()`.
 #'
-#' @param ... Two or more `BwgTrack`-compatible objects.
-#' @param tracks Optional list of `BwgTrack`-compatible objects. Use either
+#' @param ... Two or more validated `BwgTrack` objects.
+#' @param tracks Optional list of validated `BwgTrack` objects. Use either
 #'   `...` or `tracks`.
 #' @param method Merge strategy. `auto` performs conservative, non-arithmetic
 #'   merging; `mean` and `sum` perform explicit arithmetic aggregation.
@@ -760,7 +766,7 @@ merge_bwg <- function(
       )
     })
 
-    return(bw_track(
+    return(bwg_track(
       samples = samples,
       data = result_data,
       seqinfo = seqinfo,
@@ -788,7 +794,7 @@ merge_bwg <- function(
     merge_adjacent = merge_adjacent
   )
 
-  bw_track(
+  bwg_track(
     samples = aggregated$samples,
     data = aggregated$data,
     seqinfo = aggregated$seqinfo,

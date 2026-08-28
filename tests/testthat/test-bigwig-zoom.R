@@ -10,7 +10,7 @@ test_that("native BigWig writer creates readable zoom levels", {
   source <- read_bwg(
     bedgraph_file,
     format = "bedgraph",
-    sample_names = "example",
+    sample_ids = "example",
     mode = "memory"
   )
   outdir <- tempfile(pattern = "bwtools_zoom_")
@@ -24,7 +24,13 @@ test_that("native BigWig writer creates readable zoom levels", {
     zoom = TRUE
   )
 
-  zoom_info <- zoominfo_bwg(written$file)
+  written_track <- read_bwg(
+    written$file,
+    format = "bigwig",
+    sample_ids = "example",
+    mode = "lazy"
+  )
+  zoom_info <- zoominfo_bwg(written_track)
   expect_gt(nrow(zoom_info), 0L)
   expect_true(all(zoom_info$level > 0L))
   expect_true(all(zoom_info$data_offset > 0))
@@ -52,7 +58,7 @@ test_that("BigWig zoom levels can be disabled", {
     value = c(1, 2),
     strand = "*"
   )
-  track <- bw_track(
+  track <- bwg_track(
     data.table::data.table(sample_id = "sampleA", strand = "*"),
     signal,
     meta = list(mode = "memory")
@@ -67,7 +73,13 @@ test_that("BigWig zoom levels can be disabled", {
     overwrite = TRUE,
     zoom = FALSE
   )
-  zoom_info <- zoominfo_bwg(written$file)
+  written_track <- read_bwg(
+    written$file,
+    format = "bigwig",
+    sample_ids = "sampleA",
+    mode = "lazy"
+  )
+  zoom_info <- zoominfo_bwg(written_track)
   expect_equal(nrow(zoom_info), 0L)
 })
 

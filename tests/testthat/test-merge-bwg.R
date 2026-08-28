@@ -37,7 +37,7 @@ make_merge_track <- function(
       length = as.integer(chrom_length)
     )
   }
-  bw_track(samples, signal, seqinfo = seqinfo, meta = list(mode = "memory"))
+  bwg_track(samples, signal, seqinfo = seqinfo, meta = list(mode = "memory"))
 }
 
 test_that("auto is the default merge strategy", {
@@ -242,7 +242,7 @@ test_that("mean zero counts members without covered intervals", {
     chrom = "chr1",
     length = 100L
   )
-  b <- bw_track(
+  b <- bwg_track(
     empty_samples,
     empty_signal,
     seqinfo = empty_seqinfo,

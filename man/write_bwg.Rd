@@ -5,10 +5,10 @@
 \title{Write genomic signal tracks}
 \usage{
 write_bwg(
-  object,
+  x,
   outdir,
   format = c("bigwig", "wig", "bedgraph"),
-  samples = NULL,
+  sample_ids = NULL,
   chrom_sizes = NULL,
   overwrite = FALSE,
   compress = FALSE,
@@ -17,35 +17,35 @@ write_bwg(
 )
 }
 \arguments{
-\item{object}{A \code{BwgTrack}-compatible object.}
+\item{x}{A validated \code{BwgTrack} object.}
 
 \item{outdir}{Output directory.}
 
 \item{format}{Output format: \code{bigwig}, \code{wig}, or \code{bedgraph}.}
 
-\item{samples}{Optional sample IDs. By default all samples are written.}
+\item{sample_ids}{Optional sample IDs. Defaults to all samples.}
 
 \item{chrom_sizes}{Chromosome sizes for BigWig output. May be a two-column
 file or table. If omitted, complete chromosome lengths are taken from
-\code{object$seqinfo} when available.}
+\code{seqinfo_bwg(x)} when available.}
 
 \item{overwrite}{Whether existing output files may be replaced.}
 
 \item{compress}{Whether WIG or bedGraph output should be gzip-compressed.
 BigWig data blocks are always compressed internally by the file format.}
 
-\item{zoom}{Whether native BigWig output should include zoom summary levels.
-Ignored for WIG, bedGraph, and direct lazy BigWig file copies.}
+\item{zoom}{Whether native BigWig output should include zoom summary levels.}
 
 \item{max_zoom_levels}{Maximum number of BigWig zoom levels to create when
 \code{zoom = TRUE}.}
 }
 \value{
-Invisibly returns a data.table containing sample IDs, output files,
-and formats.
+Invisibly returns a data.table with \code{sample_id}, \code{file}, and \code{format}.
 }
 \description{
-Writes a \code{BwgTrack}-compatible object to BigWig, WIG, or bedGraph files.
-BigWig files are written directly by the native R backend and do not require
-UCSC command-line programs, Rcpp, or external BigWig libraries.
+Write genomic signal tracks
+
+Writes a standardized \code{BwgTrack} to BigWig, WIG, or bedGraph files. File
+persistence is handled only by this function; retrieval, merging, and
+statistics never write files.
 }

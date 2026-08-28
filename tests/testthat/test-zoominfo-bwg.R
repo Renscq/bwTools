@@ -10,7 +10,7 @@ test_that("zoominfo_bwg reports native writer zoom levels", {
   source <- read_bwg(
     bedgraph_file,
     format = "bedgraph",
-    sample_names = "example",
+    sample_ids = "example",
     mode = "memory"
   )
   outdir <- tempfile(pattern = "bwtools_zoominfo_")
@@ -24,23 +24,19 @@ test_that("zoominfo_bwg reports native writer zoom levels", {
     zoom = TRUE
   )
 
-  path_info <- zoominfo_bwg(written$file)
-  expect_gt(nrow(path_info), 0L)
-  expect_named(path_info, c("level", "data_offset", "index_offset"))
-  expect_true(all(path_info$level > 0))
-  expect_true(all(path_info$data_offset > 0))
-  expect_true(all(path_info$index_offset > path_info$data_offset))
-
   track <- read_bwg(
     written$file,
     format = "bigwig",
-    sample_names = "example",
+    sample_ids = "example",
     mode = "lazy"
   )
   object_info <- zoominfo_bwg(track)
+  expect_gt(nrow(object_info), 0L)
   expect_named(object_info, c("sample_id", "level", "data_offset", "index_offset"))
   expect_true(all(object_info$sample_id == "example"))
-  expect_equal(object_info$level, path_info$level)
+  expect_true(all(object_info$level > 0))
+  expect_true(all(object_info$data_offset > 0))
+  expect_true(all(object_info$index_offset > object_info$data_offset))
 })
 
 test_that("zoominfo_bwg returns an empty table when zoom is disabled", {
@@ -52,7 +48,7 @@ test_that("zoominfo_bwg returns an empty table when zoom is disabled", {
     value = c(1, 2),
     strand = "*"
   )
-  track <- bw_track(
+  track <- bwg_track(
     data.table::data.table(sample_id = "sampleA", strand = "*"),
     signal,
     meta = list(mode = "memory")
@@ -68,7 +64,13 @@ test_that("zoominfo_bwg returns an empty table when zoom is disabled", {
     zoom = FALSE
   )
 
-  info <- zoominfo_bwg(written$file)
+  written_track <- read_bwg(
+    written$file,
+    format = "bigwig",
+    sample_ids = "sampleA",
+    mode = "lazy"
+  )
+  info <- zoominfo_bwg(written_track)
   expect_equal(nrow(info), 0L)
-  expect_named(info, c("level", "data_offset", "index_offset"))
+  expect_named(info, c("sample_id", "level", "data_offset", "index_offset"))
 })

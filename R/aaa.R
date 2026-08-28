@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-27
-# Version: dev005
+# Version: dev006
 # Function: Define package constants and internal caches
 # Input: None
 # Output: Internal constants and environments
@@ -28,9 +28,9 @@
 
 #' bwTools: Native R tools for genomic signal tracks
 #'
-#' Native R tools for reading, writing, and manipulating BigWig, WIG, and bedGraph
-#' signal tracks. In-memory objects follow the `BwgTrack` contract used by
-#' GeneTrackR and use 1-based closed coordinates.
+#' Native R tools for reading, writing, retrieving, merging, and summarizing
+#' BigWig, WIG, and bedGraph signal tracks. Public analysis functions operate on
+#' the standardized BwgTrack schema v2 and use 1-based closed coordinates.
 #'
 #' @keywords internal
 "_PACKAGE"

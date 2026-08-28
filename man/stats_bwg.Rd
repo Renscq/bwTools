@@ -2,46 +2,43 @@
 % Please edit documentation in R/stats-bwg.R
 \name{stats_bwg}
 \alias{stats_bwg}
-\title{Calculate BigWig interval statistics}
+\title{Calculate interval statistics}
 \usage{
 stats_bwg(
-  object,
+  x,
   chrom,
   start,
   end,
   n_bins = 1L,
   stat = c("mean", "stdev", "max", "min", "coverage", "sum"),
-  samples = NULL,
+  sample_ids = NULL,
   use_zoom = TRUE
 )
 }
 \arguments{
-\item{object}{A local BigWig path or a \code{BwgTrack}-compatible object.}
+\item{x}{A validated \code{BwgTrack} object.}
 
 \item{chrom}{Chromosome name.}
 
-\item{start}{Start coordinate in 1-based closed coordinates.}
+\item{start}{Start coordinate, 1-based closed.}
 
-\item{end}{End coordinate in 1-based closed coordinates.}
+\item{end}{End coordinate, 1-based closed.}
 
-\item{n_bins}{Number of equal genomic bins.}
+\item{n_bins}{Number of equal-width bins.}
 
-\item{stat}{Statistic to calculate: \code{mean}, \code{stdev}, \code{max}, \code{min},
-\code{coverage}, or \code{sum}.}
+\item{stat}{Statistic: \code{mean}, \code{stdev}, \code{max}, \code{min}, \code{coverage}, or \code{sum}.}
 
-\item{samples}{Optional sample IDs when \code{object} is a multi-sample
-\code{BwgTrack}.}
+\item{sample_ids}{Optional sample IDs. Defaults to all samples.}
 
 \item{use_zoom}{Whether lazy BigWig inputs may use zoom summary levels.
-Zoom results are approximate when query bins only partially overlap stored
+Zoom results may be approximate when query bins partially overlap stored
 zoom windows. Use \code{FALSE} for exact values.}
 }
 \value{
 A data.table with one row per sample and genomic bin.
 }
 \description{
-Calculates coverage-aware statistics over one or more equal-width genomic
-bins. Lazy BigWig inputs can use native BigWig zoom summaries when an
-appropriate resolution is available. Set \code{use_zoom = FALSE} to force exact
-full-resolution calculations.
+Calculates coverage-aware statistics over equal-width genomic bins from a
+standardized \code{BwgTrack}. Memory-mode tracks use full-resolution signal.
+Lazy BigWig tracks may use stored zoom summaries when \code{use_zoom = TRUE}.
 }

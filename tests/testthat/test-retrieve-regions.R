@@ -13,7 +13,7 @@ test_that("retrieve_bwg preserves the single-region data API", {
     value = c(1, 2, 3),
     strand = "*"
   )
-  track <- bw_track(samples, signal, meta = list(mode = "memory"))
+  track <- bwg_track(samples, signal, meta = list(mode = "memory"))
 
   observed <- retrieve_bwg(track, "chr1", 110L, 160L)
 
@@ -38,7 +38,7 @@ test_that("retrieve_bwg handles multiple regions as a genomic union", {
     value = c(1, 2, 3),
     strand = "*"
   )
-  track <- bw_track(samples, signal, meta = list(mode = "memory"))
+  track <- bwg_track(samples, signal, meta = list(mode = "memory"))
   regions <- data.frame(
     chrom = c("chr1", "chr1"),
     start = c(510L, 561L),
@@ -73,7 +73,7 @@ test_that("retrieve_bwg can return a write-ready BwgTrack", {
     chrom = c("chr1", "chr2", "chr1", "chr2"),
     length = c(1000L, 800L, 1000L, 800L)
   )
-  track <- bw_track(
+  track <- bwg_track(
     samples,
     signal,
     seqinfo = seqinfo,
@@ -84,7 +84,7 @@ test_that("retrieve_bwg can return a write-ready BwgTrack", {
   observed <- retrieve_bwg(
     track,
     regions = regions,
-    samples = "sampleA",
+    sample_ids = "sampleA",
     result = "track"
   )
 
@@ -108,7 +108,7 @@ test_that("retrieve_bwg performs indexed multi-region lazy BigWig retrieval", {
   track <- read_bwg(
     file,
     format = "bigwig",
-    sample_names = "example",
+    sample_ids = "example",
     mode = "lazy"
   )
   regions <- data.frame(
@@ -142,7 +142,7 @@ test_that("retrieve_bwg validates query mode and sample IDs", {
     value = 1,
     strand = "*"
   )
-  track <- bw_track(samples, signal, meta = list(mode = "memory"))
+  track <- bwg_track(samples, signal, meta = list(mode = "memory"))
 
   expect_error(
     retrieve_bwg(
@@ -159,7 +159,7 @@ test_that("retrieve_bwg validates query mode and sample IDs", {
     "valid 1-based closed intervals"
   )
   expect_error(
-    retrieve_bwg(track, "chr1", 1L, 10L, samples = "missing"),
+    retrieve_bwg(track, "chr1", 1L, 10L, sample_ids = "missing"),
     "Unknown sample IDs"
   )
 })
@@ -174,7 +174,7 @@ test_that("retrieved BwgTrack persists through write_bwg without retrieval-side 
   source <- read_bwg(
     file,
     format = "bigwig",
-    sample_names = "example",
+    sample_ids = "example",
     mode = "lazy"
   )
   regions <- data.frame(
@@ -199,7 +199,7 @@ test_that("retrieved BwgTrack persists through write_bwg without retrieval-side 
   roundtrip <- read_bwg(
     written$file,
     format = "bigwig",
-    sample_names = "example",
+    sample_ids = "example",
     mode = "memory"
   )
 

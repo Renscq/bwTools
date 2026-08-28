@@ -7,7 +7,7 @@ test_that("stats_bwg calculates exact coverage-aware statistics", {
     value = c(2, 4),
     strand = "*"
   )
-  track <- bw_track(
+  track <- bwg_track(
     data.table::data.table(sample_id = "sampleA", strand = "*"),
     signal,
     seqinfo = data.table::data.table(sample_id = "sampleA", chrom = "chr1", length = 20L),
@@ -40,7 +40,7 @@ test_that("stats_bwg reports missing bins as NA rather than zero", {
     value = 2,
     strand = "*"
   )
-  track <- bw_track(
+  track <- bwg_track(
     data.table::data.table(sample_id = "sampleA", strand = "*"),
     signal,
     meta = list(mode = "memory")
@@ -59,7 +59,7 @@ test_that("stats_bwg can force full-resolution BigWig calculations", {
   lazy <- read_bwg(
     bw_file,
     format = "bigwig",
-    sample_names = "example",
+    sample_ids = "example",
     mode = "lazy"
   )
   result <- stats_bwg(
@@ -88,7 +88,7 @@ test_that("stats_bwg uses zoom levels from native writer for coarse bins", {
   source <- read_bwg(
     bedgraph_file,
     format = "bedgraph",
-    sample_names = "example",
+    sample_ids = "example",
     mode = "memory"
   )
   outdir <- tempfile(pattern = "bwtools_stats_zoom_")
@@ -104,7 +104,7 @@ test_that("stats_bwg uses zoom levels from native writer for coarse bins", {
   lazy <- read_bwg(
     written$file,
     format = "bigwig",
-    sample_names = "example",
+    sample_ids = "example",
     mode = "lazy"
   )
   result <- stats_bwg(

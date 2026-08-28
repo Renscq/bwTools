@@ -1,8 +1,8 @@
 # Author: Rensc
 # Date: 2026-08-27
-# Version: dev002
+# Version: dev003
 # Function: Calculate exact or zoom-accelerated BigWig interval statistics
-# Input: BigWig path or BwgTrack-compatible object and genomic bins
+# Input: Validated BwgTrack object and genomic bins
 # Output: Per-bin signal statistics in 1-based closed coordinates
 
 bw_stat_bins <- function(start, end, n_bins) {
@@ -191,81 +191,62 @@ bw_stats_bigwig_file <- function(file, sample_id, chrom, start, end, n_bins, sta
   out[]
 }
 
-#' Calculate BigWig interval statistics
+#' Calculate interval statistics
 #'
-#' @description
-#' Calculates coverage-aware statistics over one or more equal-width genomic
-#' bins. Lazy BigWig inputs can use native BigWig zoom summaries when an
-#' appropriate resolution is available. Set `use_zoom = FALSE` to force exact
-#' full-resolution calculations.
+#' Calculates coverage-aware statistics over equal-width genomic bins from a
+#' standardized `BwgTrack`. Memory-mode tracks use full-resolution signal.
+#' Lazy BigWig tracks may use stored zoom summaries when `use_zoom = TRUE`.
 #'
-#' @param object A local BigWig path or a `BwgTrack`-compatible object.
+#' @param x A validated `BwgTrack` object.
 #' @param chrom Chromosome name.
-#' @param start Start coordinate in 1-based closed coordinates.
-#' @param end End coordinate in 1-based closed coordinates.
-#' @param n_bins Number of equal genomic bins.
-#' @param stat Statistic to calculate: `mean`, `stdev`, `max`, `min`,
-#'   `coverage`, or `sum`.
-#' @param samples Optional sample IDs when `object` is a multi-sample
-#'   `BwgTrack`.
+#' @param start Start coordinate, 1-based closed.
+#' @param end End coordinate, 1-based closed.
+#' @param n_bins Number of equal-width bins.
+#' @param stat Statistic: `mean`, `stdev`, `max`, `min`, `coverage`, or `sum`.
+#' @param sample_ids Optional sample IDs. Defaults to all samples.
 #' @param use_zoom Whether lazy BigWig inputs may use zoom summary levels.
-#'   Zoom results are approximate when query bins only partially overlap stored
+#'   Zoom results may be approximate when query bins partially overlap stored
 #'   zoom windows. Use `FALSE` for exact values.
 #' @return A data.table with one row per sample and genomic bin.
 #' @export
 stats_bwg <- function(
-  object,
+  x,
   chrom,
   start,
   end,
   n_bins = 1L,
   stat = c("mean", "stdev", "max", "min", "coverage", "sum"),
-  samples = NULL,
+  sample_ids = NULL,
   use_zoom = TRUE
 ) {
+  bw_assert_bwg(x)
   stat <- match.arg(stat)
   if (!is.logical(use_zoom) || length(use_zoom) != 1L || is.na(use_zoom)) {
     bw_stop("`use_zoom` must be TRUE or FALSE.")
   }
-  chrom <- as.character(chrom)[1L]
-  if (is.na(chrom) || !nzchar(chrom)) bw_stop("`chrom` must be non-empty.")
-  start <- suppressWarnings(as.integer(start)[1L])
-  end <- suppressWarnings(as.integer(end)[1L])
-  n_bins <- suppressWarnings(as.integer(n_bins)[1L])
+  chrom <- as.character(chrom)
+  if (length(chrom) != 1L || is.na(chrom) || !nzchar(chrom)) {
+    bw_stop("`chrom` must be a single non-empty chromosome name.")
+  }
+  start <- suppressWarnings(as.integer(start))
+  end <- suppressWarnings(as.integer(end))
+  n_bins <- suppressWarnings(as.integer(n_bins))
+  if (length(start) != 1L || length(end) != 1L || length(n_bins) != 1L) {
+    bw_stop("`start`, `end`, and `n_bins` must be scalar values.")
+  }
   bw_stat_bins(start, end, n_bins)
 
-  if (is.character(object) && length(object) == 1L && !is.na(object)) {
-    file <- bw_validate_local_file(object)
-    if (bw_detect_format(file) != "bigwig") {
-      bw_stop("A character `object` supplied to `stats_bwg()` must be a BigWig file.")
-    }
-    return(bw_stats_bigwig_file(
-      file, bw_file_stem(file), chrom, start, end, n_bins, stat, use_zoom
-    ))
-  }
-
-  if (!is_bwg_track(object)) {
-    bw_stop("`object` must be a local BigWig path or a BwgTrack-compatible object.")
-  }
-  sample_tbl <- data.table::copy(data.table::as.data.table(object$samples))
-  if (!is.null(samples)) {
-    selected <- as.character(samples)
-    missing_samples <- setdiff(selected, sample_tbl$sample_id)
-    if (length(missing_samples) > 0L) {
-      bw_stop(paste0("Unknown sample IDs: ", paste(missing_samples, collapse = ", "), "."))
-    }
-    sample_tbl <- sample_tbl[sample_tbl[["sample_id"]] %in% selected]
-  }
+  sample_tbl <- bw_select_samples(x, sample_ids = sample_ids)
   if (nrow(sample_tbl) < 1L) {
     return(data.table::data.table())
   }
 
   out <- vector("list", nrow(sample_tbl))
   out_n <- 0L
-  if (!is.null(object$data)) {
-    dt <- data.table::as.data.table(object$data)
+  if (!is.null(x$data)) {
+    dt <- data.table::as.data.table(x$data)
     for (i in seq_len(nrow(sample_tbl))) {
-      sid <- sample_tbl$sample_id[i]
+      sid <- sample_tbl[["sample_id"]][i]
       keep <-
         dt[["sample_id"]] == sid &
         dt[["chrom"]] == chrom &
@@ -276,19 +257,28 @@ stats_bwg <- function(
       data.table::set(result, j = "sample_id", value = rep(sid, nrow(result)))
       data.table::setcolorder(
         result,
-        c("sample_id", "chrom", "start", "end", "stat", "value", "covered_bases", "source", "resolution")
+        c(
+          "sample_id", "chrom", "start", "end", "stat", "value",
+          "covered_bases", "source", "resolution"
+        )
       )
       out_n <- out_n + 1L
       out[[out_n]] <- result
     }
   } else {
     for (i in seq_len(nrow(sample_tbl))) {
-      if (!identical(sample_tbl$format[i], "bigwig")) {
-        bw_stop("Lazy statistics are currently supported for BigWig sources only.")
+      if (!identical(sample_tbl[["format"]][i], "bigwig")) {
+        bw_stop("Lazy statistics are supported for BigWig-backed samples only.")
       }
       result <- bw_stats_bigwig_file(
-        sample_tbl$file[i], sample_tbl$sample_id[i], chrom,
-        start, end, n_bins, stat, use_zoom
+        sample_tbl[["file"]][i],
+        sample_tbl[["sample_id"]][i],
+        chrom,
+        start,
+        end,
+        n_bins,
+        stat,
+        use_zoom
       )
       if (nrow(result) > 0L) {
         out_n <- out_n + 1L

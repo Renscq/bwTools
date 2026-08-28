@@ -1,17 +1,16 @@
 Package: bwTools
 Type: Package
 Title: Native R Tools for BigWig, WIG, and bedGraph Files
-Version: 0.5.1
+Version: 0.6.1
 Authors@R: person("Rensc", role = c("aut", "cre"), email = "rensc0718@163.com")
 Description: Provides native R implementations for reading and writing local
-    BigWig files, constructing and querying BigWig zoom summaries, calculating
-    interval statistics, indexed multi-region retrieval, direct multi-track
-    merging with automatic conflict detection, explicit signal aggregation,
-    and reading and writing WIG and bedGraph signal tracks.
-    BigWig binary I/O uses base R random-access operations, binary encoding, and
-    zlib compression without bundled C or C++ code or external UCSC executables.
-    Signal objects follow the BwgTrack data contract used by GeneTrackR for
-    direct downstream interoperability.
+    BigWig files, indexed genomic retrieval, interval statistics, automatic
+    multi-track merging, explicit signal aggregation, and reading and writing
+    WIG and bedGraph signal tracks. Version 0.6.1 standardizes the public API
+    and BwgTrack schema for downstream package integration. BigWig binary I/O
+    uses base R random-access operations, binary encoding, and zlib compression
+    without bundled C or C++ code or external UCSC executables. Public in-memory
+    signal coordinates are 1-based closed.
 License: GPL-3
 Encoding: UTF-8
 Depends: R (>= 4.2.0)
