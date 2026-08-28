@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-29
-# Version: dev002
+# Version: dev003
 # Function: Run structured large BigWig performance benchmarks
 # Input: One local BigWig file and benchmark configuration
 # Output: bwToolsBenchmark object with raw and summarized metrics
@@ -35,6 +35,10 @@
 #' @param full_stats_max_bases Maximum region size for `stats_full`. Larger
 #'   regions are recorded as skipped rather than forcing an expensive exact
 #'   calculation.
+#' @param write_max_bases Maximum region size for the optional `write`
+#'   benchmark. Larger regions are recorded as skipped. Writer profiling is
+#'   opt-in and benchmarks every selected region up to this bound with zoom
+#'   disabled and enabled.
 #' @return A `bwToolsBenchmark` object containing `system`, `file`, `config`,
 #'   `regions`, `results`, and `summary` components. Memory metrics distinguish
 #'   current live R heap after garbage collection from the approximate maximum
@@ -51,7 +55,8 @@ benchmark_bwg <- function(
   iterations = 3L,
   warmup = 1L,
   operations = c("read_lazy", "retrieve", "stats_zoom", "stats_full"),
-  full_stats_max_bases = 1e6
+  full_stats_max_bases = 1e6,
+  write_max_bases = 1e7
 ) {
   file <- bw_validate_local_file(file)
   if (!identical(detect_bwg_format(file), "bigwig")) {
@@ -68,6 +73,10 @@ benchmark_bwg <- function(
   full_stats_max_bases <- bw_benchmark_positive_integer(
     full_stats_max_bases,
     "full_stats_max_bases"
+  )
+  write_max_bases <- bw_benchmark_positive_integer(
+    write_max_bases,
+    "write_max_bases"
   )
 
   operations <- unique(as.character(operations))
@@ -301,51 +310,96 @@ benchmark_bwg <- function(
   }
 
   if ("write" %in% operations) {
-    largest <- benchmark_regions[which.max(as.numeric(benchmark_regions[["bases"]]))]
-    write_track <- retrieve_bwg(
-      lazy_track,
-      chrom = largest[["chrom"]],
-      start = largest[["start"]],
-      end = largest[["end"]],
-      sample_ids = sample_id,
-      result = "track"
-    )
-    for (zoom_value in c(FALSE, TRUE)) {
-      variant <- if (isTRUE(zoom_value)) "zoom_on" else "zoom_off"
-      for (iteration in seq_len(iterations)) {
-        run_dir <- tempfile(paste0("bwtools_benchmark_write_", variant, "_"))
-        dir.create(run_dir, recursive = TRUE, showWarnings = FALSE)
-        measurement <- bw_benchmark_measure(
-          function() write_bwg(
-            write_track,
-            outdir = run_dir,
-            format = "bigwig",
-            sample_ids = sample_id,
-            overwrite = TRUE,
-            zoom = zoom_value
-          ),
-          warmup = warmup
-        )
-        output_mb <- NA_real_
-        if (!is.null(measurement$value) && is.data.frame(measurement$value) &&
-            "file" %in% names(measurement$value) && nrow(measurement$value) > 0L) {
-          output_file <- measurement$value[["file"]][1L]
-          if (file.exists(output_file)) {
-            output_mb <- as.numeric(file.info(output_file)$size) / 1024^2
-          }
+    for (region_i in seq_len(nrow(benchmark_regions))) {
+      region <- benchmark_regions[region_i]
+      if (as.numeric(region[["bases"]]) > write_max_bases) {
+        for (variant in c("zoom_off", "zoom_on")) {
+          add_row(bw_benchmark_skipped_row(
+            operation = "write",
+            variant = variant,
+            file_mb = file_mb,
+            region = region,
+            message = paste0(
+              "Region exceeds `write_max_bases` (",
+              format(write_max_bases, scientific = FALSE),
+              " bp)."
+            )
+          ))
         }
-        add_row(bw_benchmark_result_row(
-          measurement,
-          operation = "write",
-          variant = variant,
-          iteration = iteration,
-          file_mb = file_mb,
-          region = largest,
-          output_mb = output_mb,
-          note = "Write profiling materializes only the largest selected benchmark region."
-        ))
-        unlink(run_dir, recursive = TRUE, force = TRUE)
+        next
       }
+
+      write_track <- retrieve_bwg(
+        lazy_track,
+        chrom = region[["chrom"]],
+        start = region[["start"]],
+        end = region[["end"]],
+        sample_ids = sample_id,
+        result = "track"
+      )
+      if (is.null(write_track$data) || nrow(write_track$data) < 1L) {
+        for (variant in c("zoom_off", "zoom_on")) {
+          add_row(bw_benchmark_skipped_row(
+            operation = "write",
+            variant = variant,
+            file_mb = file_mb,
+            region = region,
+            message = "No signal intervals are available in this benchmark region."
+          ))
+        }
+        rm(write_track)
+        invisible(gc())
+        next
+      }
+      input_metrics <- bw_benchmark_write_input_metrics(write_track)
+
+      for (zoom_value in c(FALSE, TRUE)) {
+        variant <- if (isTRUE(zoom_value)) "zoom_on" else "zoom_off"
+        for (iteration in seq_len(iterations)) {
+          run_dir <- tempfile(paste0("bwtools_benchmark_write_", variant, "_"))
+          dir.create(run_dir, recursive = TRUE, showWarnings = FALSE)
+          measurement <- bw_benchmark_measure(
+            function() write_bwg(
+              write_track,
+              outdir = run_dir,
+              format = "bigwig",
+              sample_ids = sample_id,
+              overwrite = TRUE,
+              zoom = zoom_value
+            ),
+            warmup = warmup
+          )
+          output_mb <- NA_real_
+          if (!is.null(measurement$value) && is.data.frame(measurement$value) &&
+              "file" %in% names(measurement$value) && nrow(measurement$value) > 0L) {
+            output_file <- measurement$value[["file"]][1L]
+            if (file.exists(output_file)) {
+              output_mb <- as.numeric(file.info(output_file)$size) / 1024^2
+            }
+          }
+          add_row(bw_benchmark_result_row(
+            measurement,
+            operation = "write",
+            variant = variant,
+            iteration = iteration,
+            file_mb = file_mb,
+            region = region,
+            output_mb = output_mb,
+            input_signal_mb = input_metrics$input_signal_mb,
+            input_intervals = input_metrics$input_intervals,
+            input_payload_mb = input_metrics$input_payload_mb,
+            input_covered_bases = input_metrics$input_covered_bases,
+            input_data_blocks = input_metrics$input_data_blocks,
+            note = paste(
+              "Writer timing excludes indexed retrieval; the selected region",
+              "is materialized before timing write_bwg()."
+            )
+          ))
+          unlink(run_dir, recursive = TRUE, force = TRUE)
+        }
+      }
+      rm(write_track)
+      invisible(gc())
     }
   }
 
@@ -389,6 +443,11 @@ benchmark_bwg <- function(
     warmup = warmup,
     operations = operations,
     full_stats_max_bases = full_stats_max_bases,
+    write_max_bases = write_max_bases,
+    writer_metric = paste(
+      "write timing excludes region retrieval; input_payload_mb estimates the",
+      "uncompressed primary type-1 BigWig data payload and excludes indexes/zoom"
+    ),
     memory_metric = paste(
       "R heap metrics from gc(): live_heap_after_mb is current used heap after GC;",
       "peak_heap_mb is max used since gc(reset = TRUE); neither is process RSS"

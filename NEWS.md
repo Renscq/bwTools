@@ -1,3 +1,25 @@
+# bwTools 0.7.3
+
+## Native BigWig writer benchmark and profiling
+
+- Kept the 0.7.2 indexed reader, block-streamed exact statistics, zoom logic,
+  BwgTrack schema v2, and public analysis API unchanged.
+- Expanded the optional `write` benchmark to profile every selected benchmark
+  region rather than only the largest region.
+- Added `write_max_bases` as an explicit safety bound for writer stress tests.
+- Benchmarked native BigWig writing with `zoom = FALSE` and `zoom = TRUE` for
+  each eligible region while excluding indexed retrieval from timed writer work.
+- Added writer-input diagnostics for materialized signal size, interval count,
+  covered bases, estimated uncompressed type-1 data payload, and data-block count.
+- Added writer throughput metrics for input signal MB/s, estimated payload MB/s,
+  intervals/s, output MB/s, and genomic Mb/s.
+- Added output-size diagnostics comparing final BigWig size with the in-memory
+  signal object and estimated uncompressed primary data payload.
+- Added summary-level zoom elapsed-time and output-size overhead relative to the
+  corresponding `zoom_off` writer benchmark.
+- Added regression tests for multi-region writer profiling, new writer metrics,
+  zoom-overhead summaries, and `write_max_bases` skipping behavior.
+
 # bwTools 0.7.2
 
 ## Indexed retrieval and benchmark memory refinement

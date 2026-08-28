@@ -8,7 +8,7 @@ execute:
 
 # bwTools
 
-Current development release: **0.7.2**
+Current development release: **0.7.3**
 
 `bwTools` provides native-R reading, writing, indexed retrieval, merging, and
 statistics for BigWig, WIG, and bedGraph genomic signal tracks.
@@ -16,9 +16,9 @@ statistics for BigWig, WIG, and bedGraph genomic signal tracks.
 The 0.6.x series standardized the public API and the `BwgTrack` object contract
 so downstream packages can use bwTools without depending on internal list
 implementation details. Version 0.7.0 established reproducible large-BigWig
-benchmarks; version 0.7.1 introduced block-streamed exact statistics, and version
-0.7.2 refines indexed retrieval and benchmark memory diagnostics without changing
-the public API.
+benchmarks; version 0.7.1 introduced block-streamed exact statistics, version
+0.7.2 refined indexed retrieval and memory diagnostics, and version 0.7.3 adds
+real native-writer profiling without changing the public analysis API.
 
 ## Core principles
 
@@ -548,12 +548,7 @@ without `sample_id` is expanded to the object's samples.
 Downstream packages should use this pattern:
 
 ```{r}
-files <- "E:/rensc/PHD/1404/bigwig/deeptools/KO1.mrna.bigWig"
-sample_ids = "KO1.mrna"
-files <- "E:/rensc/PHD/1404/bigwig/bedtools/mrna3/1404_1.bigwig"
-sample_ids = "1404_1"
-
-x <- read_bwg(files, sample_ids = sample_ids, mode = "memory")
+x <- read_bwg(files, sample_ids = sample_ids)
 validate_bwg(x)
 
 sample_meta <- samples_bwg(x)
@@ -567,18 +562,6 @@ signal <- retrieve_bwg(
   end = end,
   sample_ids = sample_ids
 )
-#########################################
-bench <- benchmark_bwg(
-  "E:/rensc/PHD/1404/bigwig/bedtools/mrna3/1404_1.bigwig",
-  sample_id = "1404_1",
-  region_sizes = c(1e4, 1e6, 1e7),
-  n_bins = 1000L,
-  iterations = 3L,
-  warmup = 1L
-)
-
-bench
-bench$summary
 ```
 
 Do not depend on private functions such as:
@@ -659,9 +642,11 @@ bench_io <- benchmark_bwg(
 ```
 
 `merge` materializes four non-overlapping parts of the largest selected region
-before timing `merge_bwg()`. `write` writes only the largest selected region and
-benchmarks both `zoom = FALSE` and the default `zoom = TRUE`. This keeps the
-benchmark bounded by the chosen genomic regions.
+before timing `merge_bwg()`. `write` materializes each selected benchmark region
+*before* writer timing, then benchmarks `write_bwg()` with both `zoom = FALSE`
+and the default `zoom = TRUE`. Indexed retrieval is therefore excluded from the
+writer timing itself. Writer cases larger than `write_max_bases` are recorded as
+skipped.
 
 Full-file memory loading is never part of the default suite. It must be selected
 explicitly:
@@ -753,6 +738,77 @@ bench_full_large <- benchmark_bwg(
 Keep the default bound for routine diagnostics; raise it only when intentionally
 stress-testing the exact full-resolution path.
 
+### 0.7.3 native writer profiling
+
+Version 0.7.3 freezes the 0.7.2 reader/statistics performance baseline and shifts
+benchmarking to native BigWig writing. The optional writer benchmark now profiles
+every selected region up to `write_max_bases` rather than only the largest region.
+This makes scaling across 1 Mb, 5 Mb, and 10 Mb regions directly visible.
+
+For the first real writer benchmark, a focused configuration is recommended:
+
+```{r}
+bench_write <- benchmark_bwg(
+  "/data/sample.bigwig",
+  sample_id = "sampleA",
+  region_sizes = c(1e6, 5e6),
+  iterations = 3L,
+  warmup = 1L,
+  operations = "write",
+  write_max_bases = 5e6
+)
+
+bench_write$summary
+```
+
+For each region, two writer variants are produced:
+
+```{text}
+zoom_off   write native BigWig without zoom summaries
+zoom_on    write native BigWig with the default zoom hierarchy
+```
+
+Retrieval is intentionally performed before timing. Writer rows therefore report
+metrics for the already-materialized signal being passed to `write_bwg()`:
+
+```{text}
+input_signal_mb          R object size of the materialized signal table
+input_intervals          number of signal intervals
+input_covered_bases      total covered bases represented by the intervals
+input_data_blocks        expected primary BigWig data-block count
+input_payload_mb         estimated uncompressed primary type-1 data payload
+output_file_mb           final BigWig file size
+input_signal_mb_per_sec  in-memory signal throughput
+input_payload_mb_per_sec estimated primary payload throughput
+intervals_per_sec        interval-writing throughput
+output_mb_per_sec        final BigWig output throughput
+output_to_signal_ratio   output file size / in-memory signal object size
+payload_to_output_ratio  estimated primary payload / final output file size
+```
+
+`input_payload_mb` estimates only the uncompressed primary type-1 BigWig data
+payload used by the current writer. It excludes the chromosome tree, R-tree,
+headers, summaries, and zoom data, so `payload_to_output_ratio` is a diagnostic
+size ratio rather than a strict compression ratio. This distinction is especially
+important for `zoom_on`, where the final file intentionally contains additional
+summary data.
+
+Matching `zoom_off` and `zoom_on` summary rows also expose derived zoom costs on
+the `zoom_on` row:
+
+```{text}
+zoom_elapsed_overhead_sec
+zoom_elapsed_overhead_pct
+zoom_size_overhead_mb
+zoom_size_overhead_pct
+```
+
+These values answer the two questions needed before writer optimization: how much
+time zoom construction adds, and how much larger the final BigWig becomes. If
+`zoom_off` itself is slow or memory-heavy, later optimization should target the
+primary data-block/R-tree path. If most cost appears only in `zoom_on`, optimization
+should target zoom-record construction and zoom writing instead.
+
 ### Benchmark result contract
 
 The returned object contains:
@@ -784,6 +840,15 @@ result_rows       returned interval/bin count
 mbases_per_sec    genomic-region throughput
 file_mb_per_sec   full-memory file-read throughput
 output_mb_per_sec native write-output throughput
+input_signal_mb   materialized writer input object size
+input_intervals   writer input interval count
+input_payload_mb  estimated uncompressed primary type-1 payload
+input_data_blocks expected primary BigWig data-block count
+input_signal_mb_per_sec  writer throughput by R input-object size
+input_payload_mb_per_sec writer throughput by estimated primary payload
+intervals_per_sec        writer interval throughput
+output_to_signal_ratio   final file / in-memory signal size ratio
+payload_to_output_ratio  estimated primary payload / final file size ratio
 stat_source       actual statistics source: zoom or full
 resolution        actual zoom reduction level when used
 status            ok / error / skipped
@@ -859,6 +924,10 @@ SKIP 0
 - **0.6.2**: hardened BigWig detection and path-encoding safety.
 - **0.6.3**: fixed automatic BigWig dispatch after format detection.
 - **0.7.0**: reproducible large-BigWig benchmark suite.
+- **0.7.1**: block-streamed exact statistics and first reader optimization.
+- **0.7.2**: indexed retrieval refinement and live/peak heap diagnostics.
+- **0.7.3**: multi-region native BigWig writer profiling and zoom-overhead metrics.
+- **0.7.4**: conditional writer optimization only if the real benchmark identifies a bottleneck.
 - **0.7.1**: block-streamed exact-statistics optimization.
 - **0.7.2**: chunked indexed retrieval and clearer heap diagnostics — current stage.
 - **0.8.x**: statistics and zoom refinements where justified by benchmarks.

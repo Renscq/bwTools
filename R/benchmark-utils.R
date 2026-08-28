@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-29
-# Version: dev002
+# Version: dev003
 # Function: Provide internal helpers for large BigWig benchmarking
 # Input: Benchmark configuration and measured R expressions
 # Output: Normalized regions, timing metrics, and benchmark summaries
@@ -191,6 +191,36 @@ bw_benchmark_result_rows <- function(x) {
   NA_integer_
 }
 
+
+bw_benchmark_write_input_metrics <- function(x) {
+  bw_assert_bwg(x)
+  if (is.null(x$data)) {
+    bw_stop("Writer benchmarking requires an in-memory BwgTrack.")
+  }
+  signal <- data.table::as.data.table(x$data)
+  intervals <- nrow(signal)
+  if (intervals < 1L) {
+    bw_stop("Writer benchmarking requires at least one signal interval.")
+  }
+
+  block_limit <- floor((.BWT_WRITE_BUFFER_SIZE - .BWT_DATA_HEADER_SIZE) / 12L)
+  chrom_counts <- table(as.character(signal[["chrom"]]))
+  data_blocks <- sum(ceiling(as.numeric(chrom_counts) / block_limit))
+  payload_bytes <- 8 + as.numeric(intervals) * 12 + data_blocks * .BWT_DATA_HEADER_SIZE
+  covered_bases <- sum(
+    as.numeric(signal[["end"]]) - as.numeric(signal[["start"]]) + 1,
+    na.rm = TRUE
+  )
+
+  list(
+    input_signal_mb = as.numeric(object.size(signal)) / 1024^2,
+    input_intervals = as.integer(intervals),
+    input_payload_mb = as.numeric(payload_bytes) / 1024^2,
+    input_covered_bases = as.numeric(covered_bases),
+    input_data_blocks = as.integer(data_blocks)
+  )
+}
+
 bw_benchmark_measure <- function(fun, warmup = 0L) {
   if (warmup > 0L) {
     for (i in seq_len(warmup)) {
@@ -247,6 +277,11 @@ bw_benchmark_result_row <- function(
   file_mb,
   region = NULL,
   output_mb = NA_real_,
+  input_signal_mb = NA_real_,
+  input_intervals = NA_integer_,
+  input_payload_mb = NA_real_,
+  input_covered_bases = NA_real_,
+  input_data_blocks = NA_integer_,
   stat_source = NA_character_,
   resolution = NA_real_,
   note = NA_character_
@@ -276,7 +311,19 @@ bw_benchmark_result_row <- function(
     result_mb = measurement$result_mb,
     result_rows = measurement$result_rows,
     input_file_mb = file_mb,
+    input_signal_mb = as.numeric(input_signal_mb),
+    input_intervals = as.integer(input_intervals),
+    input_payload_mb = as.numeric(input_payload_mb),
+    input_covered_bases = as.numeric(input_covered_bases),
+    input_data_blocks = as.integer(input_data_blocks),
     output_file_mb = output_mb,
+    output_to_signal_ratio = if (
+      is.finite(output_mb) && is.finite(input_signal_mb) && input_signal_mb > 0
+    ) output_mb / input_signal_mb else NA_real_,
+    payload_to_output_ratio = if (
+      is.finite(output_mb) && output_mb > 0 &&
+        is.finite(input_payload_mb) && input_payload_mb > 0
+    ) input_payload_mb / output_mb else NA_real_,
     stat_source = stat_source,
     resolution = resolution,
     file_mb_per_sec = if (
@@ -286,6 +333,18 @@ bw_benchmark_result_row <- function(
     output_mb_per_sec = if (
       identical(measurement$status, "ok") && is.finite(output_mb) && elapsed > 0
     ) output_mb / elapsed else NA_real_,
+    input_signal_mb_per_sec = if (
+      identical(measurement$status, "ok") &&
+        is.finite(input_signal_mb) && elapsed > 0
+    ) input_signal_mb / elapsed else NA_real_,
+    input_payload_mb_per_sec = if (
+      identical(measurement$status, "ok") &&
+        is.finite(input_payload_mb) && elapsed > 0
+    ) input_payload_mb / elapsed else NA_real_,
+    intervals_per_sec = if (
+      identical(measurement$status, "ok") &&
+        is.finite(input_intervals) && elapsed > 0
+    ) as.numeric(input_intervals) / elapsed else NA_real_,
     mbases_per_sec = if (
       identical(measurement$status, "ok") && is.finite(bases) && elapsed > 0
     ) (bases / 1e6) / elapsed else NA_real_,
@@ -410,12 +469,82 @@ bw_benchmark_summary <- function(results) {
       median_heap_delta_mb = median_or_na(ok[["heap_delta_mb"]]),
       median_result_mb = median_or_na(ok[["result_mb"]]),
       median_result_rows = median_or_na(as.numeric(ok[["result_rows"]])),
+      median_input_signal_mb = median_or_na(ok[["input_signal_mb"]]),
+      median_input_intervals = median_or_na(as.numeric(ok[["input_intervals"]])),
+      median_input_payload_mb = median_or_na(ok[["input_payload_mb"]]),
+      median_input_covered_bases = median_or_na(ok[["input_covered_bases"]]),
+      median_input_data_blocks = median_or_na(as.numeric(ok[["input_data_blocks"]])),
+      median_output_file_mb = median_or_na(ok[["output_file_mb"]]),
+      median_output_to_signal_ratio = median_or_na(ok[["output_to_signal_ratio"]]),
+      median_payload_to_output_ratio = median_or_na(ok[["payload_to_output_ratio"]]),
       median_file_mb_per_sec = median_or_na(ok[["file_mb_per_sec"]]),
       median_output_mb_per_sec = median_or_na(ok[["output_mb_per_sec"]]),
+      median_input_signal_mb_per_sec = median_or_na(ok[["input_signal_mb_per_sec"]]),
+      median_input_payload_mb_per_sec = median_or_na(ok[["input_payload_mb_per_sec"]]),
+      median_intervals_per_sec = median_or_na(ok[["intervals_per_sec"]]),
       median_mbases_per_sec = median_or_na(ok[["mbases_per_sec"]])
     )
   }
-  data.table::rbindlist(out, use.names = TRUE, fill = TRUE)[]
+  summary <- data.table::rbindlist(out, use.names = TRUE, fill = TRUE)[]
+  bw_benchmark_add_write_comparison(summary)
+}
+
+bw_benchmark_add_write_comparison <- function(summary) {
+  summary <- data.table::copy(data.table::as.data.table(summary))
+  for (name in c(
+    "zoom_elapsed_overhead_sec",
+    "zoom_elapsed_overhead_pct",
+    "zoom_size_overhead_mb",
+    "zoom_size_overhead_pct"
+  )) {
+    data.table::set(summary, j = name, value = rep(NA_real_, nrow(summary)))
+  }
+
+  write_rows <- which(summary[["operation"]] == "write")
+  if (length(write_rows) < 2L) {
+    return(summary[])
+  }
+
+  region_ids <- unique(summary[["region_id"]][write_rows])
+  for (region_id in region_ids) {
+    region_match <- if (is.na(region_id)) {
+      is.na(summary[["region_id"]])
+    } else {
+      summary[["region_id"]] == region_id
+    }
+    off_idx <- which(
+      summary[["operation"]] == "write" &
+        region_match & summary[["variant"]] == "zoom_off"
+    )
+    on_idx <- which(
+      summary[["operation"]] == "write" &
+        region_match & summary[["variant"]] == "zoom_on"
+    )
+    if (length(off_idx) != 1L || length(on_idx) != 1L) {
+      next
+    }
+
+    off_time <- summary[["median_elapsed_sec"]][off_idx]
+    on_time <- summary[["median_elapsed_sec"]][on_idx]
+    off_size <- summary[["median_output_file_mb"]][off_idx]
+    on_size <- summary[["median_output_file_mb"]][on_idx]
+
+    if (is.finite(off_time) && is.finite(on_time)) {
+      summary[["zoom_elapsed_overhead_sec"]][on_idx] <- on_time - off_time
+      if (off_time > 0) {
+        summary[["zoom_elapsed_overhead_pct"]][on_idx] <-
+          (on_time / off_time - 1) * 100
+      }
+    }
+    if (is.finite(off_size) && is.finite(on_size)) {
+      summary[["zoom_size_overhead_mb"]][on_idx] <- on_size - off_size
+      if (off_size > 0) {
+        summary[["zoom_size_overhead_pct"]][on_idx] <-
+          (on_size / off_size - 1) * 100
+      }
+    }
+  }
+  summary[]
 }
 
 bw_benchmark_system_info <- function() {

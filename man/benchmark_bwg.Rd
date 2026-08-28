@@ -15,7 +15,8 @@ benchmark_bwg(
   iterations = 3L,
   warmup = 1L,
   operations = c("read_lazy", "retrieve", "stats_zoom", "stats_full"),
-  full_stats_max_bases = 1e+06
+  full_stats_max_bases = 1e+06,
+  write_max_bases = 1e+07
 )
 }
 \arguments{
@@ -23,10 +24,7 @@ benchmark_bwg(
 
 \item{sample_id}{Sample identifier used for the benchmark track.}
 
-\item{regions}{Optional explicit genomic regions with \code{chrom}, \code{start}, and
-\code{end} columns. An optional unique \code{region_id} column is preserved. When
-omitted, centered windows are generated from
-\code{region_sizes} on \code{chrom} or on the largest chromosome.}
+\item{regions}{Optional explicit genomic regions with \code{chrom}, \code{start}, and \code{end} columns. An optional unique \code{region_id} column is preserved. When omitted, centered windows are generated from \code{region_sizes} on \code{chrom} or on the largest chromosome.}
 
 \item{chrom}{Optional chromosome used for automatically generated regions.}
 
@@ -40,29 +38,18 @@ omitted, centered windows are generated from
 
 \item{warmup}{Number of untimed warmup iterations per benchmark case.}
 
-\item{operations}{Operations to run. Supported values are \code{read_lazy},
-\code{retrieve}, \code{stats_zoom}, \code{stats_full}, \code{merge}, \code{write}, and
-\code{read_memory}.}
+\item{operations}{Operations to run. Supported values are \code{read_lazy}, \code{retrieve}, \code{stats_zoom}, \code{stats_full}, \code{merge}, \code{write}, and \code{read_memory}.}
 
-\item{full_stats_max_bases}{Maximum region size for \code{stats_full}. Larger
-regions are recorded as skipped rather than forcing an expensive exact
-calculation.}
+\item{full_stats_max_bases}{Maximum region size for \code{stats_full}. Larger regions are recorded as skipped rather than forcing an expensive exact calculation.}
+
+\item{write_max_bases}{Maximum region size for the optional \code{write} benchmark. Larger regions are recorded as skipped. Writer profiling is opt-in and benchmarks every selected region up to this bound with zoom disabled and enabled.}
 }
 \value{
-A \code{bwToolsBenchmark} object containing \code{system}, \code{file}, \code{config},
-\code{regions}, \code{results}, and \code{summary} components. Memory metrics distinguish
-current live R heap after garbage collection from the approximate maximum
-R heap observed since \code{gc(reset = TRUE)}; neither metric is process RSS.
+A \code{bwToolsBenchmark} object containing \code{system}, \code{file}, \code{config}, \code{regions}, \code{results}, and \code{summary} components. Memory metrics distinguish current live R heap after garbage collection from the approximate maximum R heap observed since \code{gc(reset = TRUE)}; neither metric is process RSS.
 }
 \description{
-Profiles the native bwTools BigWig workflow using deterministic genomic
-regions. The standard suite measures package-metadata-cold and cached lazy
-loading, indexed retrieval, zoom statistics, and bounded exact statistics.
-Optional operations benchmark region materialization/merge, native BigWig
-writing, or full-memory loading.
+Profiles the native bwTools BigWig workflow using deterministic genomic regions. The standard suite measures package-metadata-cold and cached lazy loading, indexed retrieval, zoom statistics, and bounded exact statistics. Optional operations benchmark region materialization/merge, native BigWig writing, or full-memory loading.
 }
 \details{
-This diagnostic function is intentionally file-oriented because its purpose
-is to measure file I/O. Normal analysis functions continue to consume
-validated \code{BwgTrack} objects.
+This diagnostic function is intentionally file-oriented because its purpose is to measure file I/O. Normal analysis functions continue to consume validated \code{BwgTrack} objects.
 }

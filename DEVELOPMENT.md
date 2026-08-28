@@ -305,7 +305,7 @@ Acceptance criteria:
 
 ## 0.7.2 - Indexed retrieval and memory-diagnostic refinement
 
-Status: **implemented; repeat real large-file benchmark required.**
+Status: **implemented and validated on a dense real BigWig benchmark.**
 
 Measured 0.7.1 outcome:
 
@@ -335,11 +335,70 @@ Acceptance criteria:
 - Indexed retrieval remains signal-identical to the bundled bedGraph reference.
 - Streaming exact statistics remain unchanged and continue to match memory-mode
   exact statistics.
-- Re-run the same dense real-BigWig benchmark used for 0.7.1 and compare
-  retrieval elapsed time plus both peak and live heap deltas.
-- `stats_full`, `stats_zoom`, and `read_lazy` should not regress materially.
-- Do not introduce new public user-facing analysis parameters during this
-  optimization stage.
+- Dense real-file benchmarking confirmed retrieval around 0.28 s for 1 Mb and
+  1.85 s for an approximately 9.8 Mb chromosome-wide query on the test system.
+- The 0.7.1 full-statistics improvement remained stable at approximately 0.30 s
+  for a 1 Mb / 1000-bin exact mean benchmark.
+- Live-heap deltas after GC closely tracked final retrieval object size,
+  indicating transient allocation pressure rather than persistent retention.
+- Reader/retrieval optimization is therefore frozen for the 0.7.3 writer
+  profiling stage unless later benchmarks demonstrate a new regression.
+
+## 0.7.3 - Native BigWig writer benchmark and profiling
+
+Status: **implemented; real large-file writer benchmark required.**
+
+Measured 0.7.2 outcome:
+
+- Indexed retrieval returned to the 0.7.0 performance baseline while retaining
+  the 0.7.1 block-streamed exact-statistics speedup.
+- Live-heap diagnostics showed that large retrievals retain approximately the
+  final result size after GC, while the remaining concern is transient writer and
+  retrieval allocation rather than persistent memory retention.
+- Reader/retrieval optimization can therefore pause until a later benchmark
+  demonstrates a concrete regression or bottleneck.
+
+Implemented writer profiling:
+
+- Profile every selected benchmark region when `operations` includes `write`.
+- Compare native BigWig writer behavior with zoom disabled and enabled.
+- Exclude indexed retrieval/materialization from the timed writer expression so
+  the result reflects `write_bwg()` rather than read performance.
+- Add an explicit `write_max_bases` safety limit; oversized writer cases are
+  recorded as skipped.
+- Record materialized input size, interval count, covered bases, estimated
+  uncompressed type-1 data payload, and expected primary data-block count.
+- Record output file size, interval throughput, input/payload throughput, output
+  throughput, and output-size ratios.
+- Derive zoom time overhead and zoom output-size overhead from matching
+  `zoom_off`/`zoom_on` summary rows.
+
+Acceptance criteria:
+
+- Writer benchmark output remains deterministic and valid across all selected
+  regions within `write_max_bases`.
+- `zoom_off` and `zoom_on` output files are valid BigWig files and the benchmark
+  captures both variants without timing indexed retrieval.
+- Real-file profiling should use at least two region sizes, preferably around
+  1 Mb and 5 Mb or 10 Mb, on a dense signal track.
+- Use writer timing, intervals/s, peak/live heap, output size, and zoom overhead
+  to decide whether 0.7.4 needs streaming/chunked writer changes.
+- Do not optimize writer internals until the 0.7.3 real-file benchmark identifies
+  a concrete bottleneck.
+
+## 0.7.4 - Conditional native writer optimization
+
+Status: **planned only if the 0.7.3 real-file benchmark justifies it.**
+
+Decision rules:
+
+- If `zoom_off` dominates elapsed time or peak heap, profile primary data-block
+  encoding/compression and R-tree construction before changing code.
+- If most additional cost appears only in `zoom_on`, focus on zoom-record
+  construction, zoom compression, and zoom R-tree writing.
+- Prefer streaming/chunked changes only when they materially improve the measured
+  bottleneck without regressing BigWig compatibility or writer round trips.
+- Keep the public `write_bwg()` API unchanged during performance optimization.
 
 ## 0.8.x - Statistics and zoom refinements
 

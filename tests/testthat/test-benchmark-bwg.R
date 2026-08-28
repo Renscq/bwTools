@@ -44,7 +44,7 @@ test_that("benchmark_bwg records bounded full-stat skips", {
   benchmark <- benchmark_bwg(
     file,
     sample_id = "example",
-    region_sizes = c(100L, 2000L),
+    region_sizes = c(1000L, 2000L),
     iterations = 1L,
     warmup = 0L,
     operations = "stats_full",
@@ -96,7 +96,7 @@ test_that("optional merge and write benchmark bounded selected regions", {
   benchmark <- benchmark_bwg(
     file,
     sample_id = "example",
-    region_sizes = 1000L,
+    region_sizes = c(1000L, 2000L),
     iterations = 1L,
     warmup = 0L,
     operations = c("merge", "write")
@@ -105,9 +105,35 @@ test_that("optional merge and write benchmark bounded selected regions", {
   expect_true("merge" %in% benchmark$results$operation)
   expect_true("write" %in% benchmark$results$operation)
   write_rows <- benchmark$results[benchmark$results$operation == "write"]
+  expect_equal(nrow(write_rows), 4L)
   expect_setequal(write_rows$variant, c("zoom_on", "zoom_off"))
+  expect_setequal(write_rows$region_id, c("region_1", "region_2"))
   expect_true(all(write_rows$status == "ok"))
   expect_true(all(write_rows$output_file_mb > 0))
+  expect_true(all(write_rows$input_signal_mb > 0))
+  expect_true(all(write_rows$input_intervals > 0L))
+  expect_true(all(write_rows$input_payload_mb > 0))
+  expect_true(all(write_rows$input_data_blocks > 0L))
+  expect_true(all(is.na(write_rows$intervals_per_sec) | write_rows$intervals_per_sec >= 0))
+  expect_true(all(is.na(write_rows$input_payload_mb_per_sec) | write_rows$input_payload_mb_per_sec >= 0))
+
+  write_summary <- benchmark$summary[benchmark$summary$operation == "write"]
+  expect_true(all(c(
+    "median_input_signal_mb",
+    "median_input_intervals",
+    "median_input_payload_mb",
+    "median_output_file_mb",
+    "median_output_to_signal_ratio",
+    "median_payload_to_output_ratio",
+    "median_intervals_per_sec",
+    "zoom_elapsed_overhead_sec",
+    "zoom_elapsed_overhead_pct",
+    "zoom_size_overhead_mb",
+    "zoom_size_overhead_pct"
+  ) %in% names(write_summary)))
+  zoom_on <- write_summary[write_summary$variant == "zoom_on"]
+  expect_true(all(is.finite(zoom_on$zoom_elapsed_overhead_sec)))
+  expect_true(all(is.finite(zoom_on$zoom_size_overhead_mb)))
 })
 
 test_that("read_memory profiling is explicit and works on bundled data", {
@@ -201,4 +227,29 @@ test_that("benchmark memory metrics separate live and peak R heap", {
     "median_live_heap_delta_mb",
     "median_heap_delta_mb"
   ) %in% names(benchmark$summary)))
+})
+
+
+test_that("write benchmark respects write_max_bases", {
+  file <- system.file(
+    "extdata", "bwtools_example.bigwig",
+    package = "bwTools", mustWork = TRUE
+  )
+
+  benchmark <- benchmark_bwg(
+    file,
+    sample_id = "example",
+    region_sizes = c(100L, 2000L),
+    iterations = 1L,
+    warmup = 0L,
+    operations = "write",
+    write_max_bases = 1500L
+  )
+
+  write_rows <- benchmark$results[benchmark$results$operation == "write"]
+  small <- write_rows[write_rows$region_id == "region_1"]
+  large <- write_rows[write_rows$region_id == "region_2"]
+  expect_true(all(small$status == "ok"))
+  expect_true(all(large$status == "skipped"))
+  expect_true(all(grepl("write_max_bases", large$message, fixed = TRUE)))
 })
