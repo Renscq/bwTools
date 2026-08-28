@@ -415,19 +415,47 @@ Acceptance criteria:
 - Do not optimize writer internals until the 0.7.3 real-file benchmark identifies
   a concrete bottleneck.
 
-## 0.7.5 - Conditional native writer optimization
+## 0.7.5 - Hierarchical native zoom-writer optimization
 
-Status: **planned only if the bounded 0.7.4 real-file benchmark justifies it.**
+Status: **implemented; real-file writer benchmark rerun required.**
 
-Decision rules:
+Measured 0.7.4 outcome:
 
-- If `zoom_off` dominates elapsed time or peak heap, profile primary data-block
-  encoding/compression and R-tree construction before changing code.
-- If most additional cost appears only in `zoom_on`, focus on zoom-record
-  construction, zoom compression, and zoom R-tree writing.
-- Prefer streaming/chunked changes only when they materially improve the measured
-  bottleneck without regressing BigWig compatibility or writer round trips.
-- Keep the public `write_bwg()` API unchanged during performance optimization.
+- Primary `zoom_off` writing scaled acceptably on the dense real signal track.
+- The 1 Mb writer case completed quickly without zoom summaries, while enabling
+  zoom added orders of magnitude more elapsed time.
+- The additional file size from zoom summaries was modest relative to the
+  elapsed-time overhead, identifying zoom construction as the dominant writer
+  bottleneck.
+- Primary data-block encoding, compression, chromosome-tree writing, and the
+  full-data R-tree therefore remain unchanged in 0.7.5.
+
+Implemented optimizations:
+
+- Build the first zoom level with vectorized same-window aggregation.
+- Split only intervals that actually cross a first-level zoom boundary.
+- Build every higher zoom level from the preceding level's summary records
+  instead of rescanning all full-resolution intervals.
+- Aggregate `valid_count`, `sum_data`, and `sum_squared` by summation and
+  preserve `min_value`/`max_value` by reduction over child summaries.
+- Retain only the preceding zoom level while writing the next level so the
+  writer does not keep a complete zoom pyramid resident at once.
+- Keep the public writer API, selected zoom levels, binary record layout,
+  BwgTrack schema v2, and benchmark interface unchanged.
+
+Acceptance criteria:
+
+- Hierarchical summaries match direct full-signal summaries for every stored
+  statistic within floating-point tolerance.
+- Boundary-crossing signal intervals are split correctly at first-level zoom
+  window boundaries and chromosome ends.
+- BigWig zoom metadata and zoom queries remain readable through existing
+  bwTools reader paths.
+- `zoom = FALSE` writer performance does not regress because the primary writer
+  path is untouched.
+- Rerun the bounded real-file writer benchmark and compare `zoom_on` elapsed
+  time, peak/live heap, output size, and zoom overhead against the 0.7.4
+  baseline before increasing default zoom benchmark density limits.
 
 ## 0.8.x - Statistics and zoom refinements
 

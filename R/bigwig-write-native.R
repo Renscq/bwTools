@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-27
-# Version: dev002
+# Version: dev003
 # Function: Write local BigWig files using native R binary I/O
 # Input: Canonical 1-based closed signal intervals and chromosome sizes
 # Output: Local BigWig files without external executables or compiled code
@@ -445,108 +445,246 @@ bw_select_zoom_levels <- function(signal, chrom_sizes, max_zoom_levels = .BWT_DE
   as.numeric(unique(levels))
 }
 
+bw_zoom_chrom_lengths <- function(chrom_sizes) {
+  chrom_sizes <- data.table::as.data.table(chrom_sizes)
+  stats::setNames(
+    as.numeric(chrom_sizes$length),
+    as.character(chrom_sizes$tid)
+  )
+}
+
+bw_finish_zoom_records <- function(records, chrom_sizes, level) {
+  records <- data.table::as.data.table(records)
+  if (nrow(records) < 1L) {
+    return(data.table::data.table())
+  }
+
+  chrom_length <- bw_zoom_chrom_lengths(chrom_sizes)
+  end0 <- pmin(
+    as.numeric(records$start0) + as.numeric(level),
+    unname(chrom_length[as.character(records$tid)])
+  )
+  if (any(!is.finite(end0))) {
+    bw_stop("Failed to resolve chromosome length while constructing BigWig zoom levels.")
+  }
+  data.table::set(records, j = "end0", value = as.numeric(end0))
+  data.table::setcolorder(
+    records,
+    c(
+      "tid", "start0", "end0", "valid_count",
+      "min_value", "max_value", "sum_data", "sum_squared"
+    )
+  )
+  data.table::setorderv(records, c("tid", "start0", "end0"))
+  records[]
+}
+
+bw_split_crossing_zoom_intervals <- function(
+  tid,
+  start0,
+  end0,
+  value,
+  chrom_length,
+  level
+) {
+  n <- length(start0)
+  if (n < 1L) {
+    return(data.table::data.table())
+  }
+
+  tid_parts <- vector("list", n)
+  start_parts <- vector("list", n)
+  width_parts <- vector("list", n)
+  value_parts <- vector("list", n)
+
+  for (i in seq_len(n)) {
+    pos <- as.numeric(start0[i])
+    interval_end <- as.numeric(end0[i])
+    chr_len <- as.numeric(chrom_length[i])
+    if (!is.finite(chr_len)) {
+      bw_stop("Failed to resolve chromosome length while constructing BigWig zoom levels.")
+    }
+
+    first_bin <- floor(pos / level) * level
+    last_bin <- floor((interval_end - 1) / level) * level
+    bin_starts <- seq(from = first_bin, to = last_bin, by = level)
+    bin_ends <- pmin(bin_starts + level, chr_len)
+    overlap_start <- pmax(pos, bin_starts)
+    overlap_end <- pmin(interval_end, bin_ends)
+    width <- overlap_end - overlap_start
+    keep <- width > 0
+    if (!any(keep)) next
+
+    n_keep <- sum(keep)
+    tid_parts[[i]] <- rep(as.numeric(tid[i]), n_keep)
+    start_parts[[i]] <- as.numeric(bin_starts[keep])
+    width_parts[[i]] <- as.numeric(width[keep])
+    value_parts[[i]] <- rep(as.numeric(value[i]), n_keep)
+  }
+
+  keep_parts <- lengths(start_parts) > 0L
+  if (!any(keep_parts)) {
+    return(data.table::data.table())
+  }
+  data.table::data.table(
+    tid = unlist(tid_parts[keep_parts], use.names = FALSE),
+    start0 = unlist(start_parts[keep_parts], use.names = FALSE),
+    width = unlist(width_parts[keep_parts], use.names = FALSE),
+    value = unlist(value_parts[keep_parts], use.names = FALSE)
+  )
+}
+
 bw_build_zoom_records <- function(signal, chrom_sizes, level) {
   level <- as.numeric(level)[1L]
   if (!is.finite(level) || level < 1 || level != floor(level)) {
     bw_stop("Zoom reduction level must be a positive integer.")
   }
-  signal <- data.table::copy(data.table::as.data.table(signal))
-  chrom_sizes <- data.table::copy(data.table::as.data.table(chrom_sizes))
+
+  signal <- data.table::as.data.table(signal)
+  chrom_sizes <- data.table::as.data.table(chrom_sizes)
   if (nrow(signal) < 1L) {
     return(data.table::data.table())
   }
-  data.table::setorderv(signal, c("tid", "start", "end"))
-  chrom_length <- setNames(as.numeric(chrom_sizes$length), as.character(chrom_sizes$tid))
-  out <- vector("list", nrow(signal))
-  out_n <- 0L
 
-  flush_record <- function(tid, bin_start, bin_end, valid_count, min_value, max_value, sum_data, sum_squared) {
-    data.table::data.table(
-      tid = as.numeric(tid),
-      start0 = as.numeric(bin_start),
-      end0 = as.numeric(bin_end),
-      valid_count = as.numeric(valid_count),
-      min_value = as.numeric(min_value),
-      max_value = as.numeric(max_value),
-      sum_data = as.numeric(sum_data),
-      sum_squared = as.numeric(sum_squared)
+  tid <- as.numeric(signal$tid)
+  start0 <- as.numeric(signal$start) - 1
+  end0 <- as.numeric(signal$end)
+  value <- as.numeric(signal$value)
+  width <- end0 - start0
+  start_bin <- floor(start0 / level) * level
+  end_bin <- floor((end0 - 1) / level) * level
+  same_bin <- start_bin == end_bin
+
+  pieces <- vector("list", 2L)
+  if (any(same_bin)) {
+    pieces[[1L]] <- data.table::data.table(
+      tid = tid[same_bin],
+      start0 = start_bin[same_bin],
+      width = width[same_bin],
+      value = value[same_bin]
     )
+  } else {
+    pieces[[1L]] <- data.table::data.table()
   }
 
-  current_tid <- NA_real_
-  current_start <- NA_real_
-  current_end <- NA_real_
-  valid_count <- 0
-  min_value <- NA_real_
-  max_value <- NA_real_
-  sum_data <- 0
-  sum_squared <- 0
-
-  emit_current <- function() {
-    if (is.na(current_tid) || valid_count <= 0) return(NULL)
-    flush_record(
-      current_tid, current_start, current_end, valid_count,
-      min_value, max_value, sum_data, sum_squared
+  if (any(!same_bin)) {
+    chrom_length <- bw_zoom_chrom_lengths(chrom_sizes)
+    pieces[[2L]] <- bw_split_crossing_zoom_intervals(
+      tid = tid[!same_bin],
+      start0 = start0[!same_bin],
+      end0 = end0[!same_bin],
+      value = value[!same_bin],
+      chrom_length = unname(chrom_length[as.character(tid[!same_bin])]),
+      level = level
     )
+  } else {
+    pieces[[2L]] <- data.table::data.table()
   }
 
-  for (i in seq_len(nrow(signal))) {
-    tid <- as.numeric(signal$tid[i])
-    chr_len <- chrom_length[[as.character(tid)]]
-    if (is.null(chr_len) || !is.finite(chr_len)) {
-      bw_stop("Failed to resolve chromosome length while constructing BigWig zoom levels.")
-    }
-    pos <- as.numeric(signal$start[i]) - 1
-    interval_end <- as.numeric(signal$end[i])
-    value <- as.numeric(signal$value[i])
-    while (pos < interval_end) {
-      bin_start <- floor(pos / level) * level
-      bin_end <- min(bin_start + level, chr_len)
-      overlap_end <- min(interval_end, bin_end)
-      width <- overlap_end - pos
-      if (width <= 0) {
-        bw_stop("Internal zero-width overlap while constructing BigWig zoom levels.")
-      }
-
-      same_bin <- !is.na(current_tid) && current_tid == tid && current_start == bin_start
-      if (!same_bin) {
-        record <- emit_current()
-        if (!is.null(record)) {
-          out_n <- out_n + 1L
-          if (out_n > length(out)) length(out) <- max(out_n, length(out) * 2L)
-          out[[out_n]] <- record
-        }
-        current_tid <- tid
-        current_start <- bin_start
-        current_end <- bin_end
-        valid_count <- 0
-        min_value <- value
-        max_value <- value
-        sum_data <- 0
-        sum_squared <- 0
-      }
-
-      valid_count <- valid_count + width
-      min_value <- min(min_value, value)
-      max_value <- max(max_value, value)
-      sum_data <- sum_data + width * value
-      sum_squared <- sum_squared + width * value^2
-      pos <- overlap_end
-    }
-  }
-
-  record <- emit_current()
-  if (!is.null(record)) {
-    out_n <- out_n + 1L
-    if (out_n > length(out)) length(out) <- out_n
-    out[[out_n]] <- record
-  }
-  if (out_n < 1L) {
+  pieces <- pieces[vapply(pieces, nrow, integer(1L)) > 0L]
+  if (length(pieces) < 1L) {
     return(data.table::data.table())
   }
-  ans <- data.table::rbindlist(out[seq_len(out_n)], use.names = TRUE)
-  data.table::setorderv(ans, c("tid", "start0", "end0"))
-  ans[]
+  x <- data.table::rbindlist(pieces, use.names = TRUE)
+  data.table::set(
+    x,
+    j = "sum_data",
+    value = as.numeric(x$width) * as.numeric(x$value)
+  )
+  data.table::set(
+    x,
+    j = "sum_squared",
+    value = as.numeric(x$width) * as.numeric(x$value)^2
+  )
+
+  ans <- x[
+    ,
+    .(
+      valid_count = sum(as.numeric(width)),
+      min_value = min(as.numeric(value)),
+      max_value = max(as.numeric(value)),
+      sum_data = sum(as.numeric(sum_data)),
+      sum_squared = sum(as.numeric(sum_squared))
+    ),
+    by = .(tid, start0)
+  ]
+  bw_finish_zoom_records(ans, chrom_sizes, level)
+}
+
+bw_aggregate_zoom_records <- function(records, chrom_sizes, level) {
+  level <- as.numeric(level)[1L]
+  if (!is.finite(level) || level < 1 || level != floor(level)) {
+    bw_stop("Zoom reduction level must be a positive integer.")
+  }
+
+  records <- data.table::as.data.table(records)
+  chrom_sizes <- data.table::as.data.table(chrom_sizes)
+  if (nrow(records) < 1L) {
+    return(data.table::data.table())
+  }
+
+  parent_start <- floor(as.numeric(records$start0) / level) * level
+  chrom_length <- bw_zoom_chrom_lengths(chrom_sizes)
+  parent_end <- pmin(
+    parent_start + level,
+    unname(chrom_length[as.character(records$tid)])
+  )
+  if (any(!is.finite(parent_end))) {
+    bw_stop("Failed to resolve chromosome length while aggregating BigWig zoom levels.")
+  }
+  if (any(as.numeric(records$end0) > parent_end)) {
+    bw_stop(
+      "Previous BigWig zoom records cross the requested parent zoom window."
+    )
+  }
+
+  x <- data.table::data.table(
+    tid = as.numeric(records$tid),
+    start0 = as.numeric(parent_start),
+    valid_count = as.numeric(records$valid_count),
+    min_value = as.numeric(records$min_value),
+    max_value = as.numeric(records$max_value),
+    sum_data = as.numeric(records$sum_data),
+    sum_squared = as.numeric(records$sum_squared)
+  )
+  ans <- x[
+    ,
+    .(
+      valid_count = sum(valid_count),
+      min_value = min(min_value),
+      max_value = max(max_value),
+      sum_data = sum(sum_data),
+      sum_squared = sum(sum_squared)
+    ),
+    by = .(tid, start0)
+  ]
+  bw_finish_zoom_records(ans, chrom_sizes, level)
+}
+
+bw_build_zoom_pyramid <- function(signal, chrom_sizes, levels) {
+  levels <- as.numeric(levels)
+  if (length(levels) < 1L) {
+    return(list())
+  }
+  if (any(!is.finite(levels)) || any(levels < 1) || any(levels != floor(levels))) {
+    bw_stop("Zoom reduction levels must be positive integers.")
+  }
+  if (length(levels) > 1L && any(levels[-1L] <= levels[-length(levels)])) {
+    bw_stop("Zoom reduction levels must be strictly increasing.")
+  }
+
+  out <- vector("list", length(levels))
+  out[[1L]] <- bw_build_zoom_records(signal, chrom_sizes, levels[1L])
+  if (length(levels) > 1L) {
+    for (i in 2:length(levels)) {
+      out[[i]] <- bw_aggregate_zoom_records(
+        out[[i - 1L]],
+        chrom_sizes,
+        levels[i]
+      )
+    }
+  }
+  out
 }
 
 bw_encode_zoom_block <- function(records) {
@@ -695,11 +833,22 @@ bw_write_bigwig_file <- function(
 
   zoom_headers <- vector("list", n_levels)
   if (n_levels > 0L) {
+    previous_records <- NULL
     for (i in seq_along(zoom_levels)) {
-      records <- bw_build_zoom_records(signal, chrom_sizes, zoom_levels[i])
+      records <- if (i == 1L) {
+        bw_build_zoom_records(signal, chrom_sizes, zoom_levels[i])
+      } else {
+        bw_aggregate_zoom_records(
+          previous_records,
+          chrom_sizes,
+          zoom_levels[i]
+        )
+      }
       zoom_headers[[i]] <- bw_write_zoom_level(con, records, zoom_levels[i])
+      previous_records <- records
       rm(records)
     }
+    rm(previous_records)
   }
   zoom_headers_dt <- if (n_levels > 0L) {
     data.table::rbindlist(zoom_headers, use.names = TRUE)

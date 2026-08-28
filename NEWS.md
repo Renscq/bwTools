@@ -1,3 +1,24 @@
+# bwTools 0.7.5
+
+## Hierarchical native BigWig zoom writer
+
+- Kept the validated 0.7.2 reader/retrieval baseline and 0.7.1 streaming exact
+  statistics unchanged.
+- Replaced the original per-interval first-level zoom builder with a vectorized
+  same-window aggregation path and a limited splitter for boundary-crossing
+  intervals.
+- Added hierarchical zoom aggregation so level 2 and higher are built exactly
+  from the preceding zoom summaries rather than rescanning the complete signal
+  for every reduction level.
+- Preserved `valid_count`, minimum, maximum, sum, and squared-sum semantics
+  across hierarchical aggregation.
+- Updated the writer to retain only the preceding zoom level while emitting the
+  next level, avoiding a full in-memory zoom pyramid during file writing.
+- Kept the public `write_bwg()` API, BigWig binary layout, BwgTrack schema v2,
+  and benchmark interface unchanged.
+- Added regression tests comparing hierarchical summaries with direct
+  full-signal summaries across multiple levels and boundary-crossing intervals.
+
 # bwTools 0.7.4
 
 ## Bounded and observable writer benchmarking

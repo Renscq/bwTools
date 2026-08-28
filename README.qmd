@@ -8,7 +8,7 @@ execute:
 
 # bwTools
 
-Current development release: **0.7.4**
+Current development release: **0.7.5**
 
 `bwTools` provides native-R reading, writing, indexed retrieval, merging, and
 statistics for BigWig, WIG, and bedGraph genomic signal tracks.
@@ -18,8 +18,9 @@ so downstream packages can use bwTools without depending on internal list
 implementation details. Version 0.7.0 established reproducible large-BigWig
 benchmarks; version 0.7.1 introduced block-streamed exact statistics, version
 0.7.2 refined indexed retrieval and memory diagnostics, version 0.7.3 added
-native-writer profiling, and version 0.7.4 makes expensive writer benchmarks
-bounded and observable on dense BigWig signals.
+native-writer profiling, version 0.7.4 bounded expensive writer benchmarks, and
+version 0.7.5 replaces repeated full-signal zoom scans with hierarchical zoom
+construction.
 
 ## Core principles
 
@@ -867,6 +868,101 @@ case is recorded as `skipped` instead of appearing to hang indefinitely.
 Raising these safety bounds remains possible when deliberately stress-testing
 the zoom writer.
 
+### 0.7.5 hierarchical zoom writer
+
+The bounded writer benchmark identified zoom construction, rather than the
+primary BigWig writer, as the dominant cost on dense signal tracks. Version
+0.7.5 therefore changes only the internal zoom-construction path.
+
+The previous implementation effectively followed this pattern:
+
+```{text}
+full signal -> zoom level 1
+full signal -> zoom level 2
+full signal -> zoom level 3
+...
+```
+
+Every level rescanned the complete interval table. The optimized writer uses:
+
+```{text}
+full signal
+    -> vectorized zoom level 1
+    -> aggregate level 1 into level 2
+    -> aggregate level 2 into level 3
+    -> ...
+```
+
+Each zoom record already contains the sufficient summary statistics required to
+construct the next aligned reduction level:
+
+```{text}
+valid_count
+min_value
+max_value
+sum_data
+sum_squared
+```
+
+For a parent window, `valid_count`, `sum_data`, and `sum_squared` are summed,
+while `min_value` and `max_value` are reduced across the child records. Because
+bwTools zoom levels increase by a factor of four and remain aligned to genomic
+coordinate zero, this aggregation preserves the same covered-base summaries as
+direct construction from the original signal.
+
+The first zoom level still has to inspect full-resolution intervals. Its common
+case is now vectorized: intervals contained within one zoom window are grouped
+in bulk, while only intervals that actually cross a zoom boundary are split.
+During writing, only the preceding and current zoom levels need to be retained.
+
+No user-facing writer call changes:
+
+```{r}
+written <- write_bwg(
+  x,
+  outdir = "output",
+  format = "bigwig",
+  zoom = TRUE,
+  overwrite = TRUE
+)
+```
+
+For the first performance check after installing 0.7.5, keep the conservative
+writer guard and benchmark the 1 Mb case:
+
+```{r}
+bench_zoom <- benchmark_bwg(
+  "/data/sample.bigwig",
+  sample_id = "sampleA",
+  region_sizes = 1e6,
+  operations = "write",
+  write_iterations = 1L,
+  write_warmup = 0L,
+  verbose = TRUE
+)
+
+bench_zoom$summary
+```
+
+If the 1 Mb `zoom_on` case finishes comfortably, the existing safety guard can
+be raised explicitly for a larger stress test rather than changing the package
+default prematurely:
+
+```{r}
+bench_zoom_large <- benchmark_bwg(
+  "/data/sample.bigwig",
+  sample_id = "sampleA",
+  region_sizes = 5e6,
+  operations = "write",
+  write_max_bases = 5e6,
+  write_max_intervals = 2e6,
+  write_zoom_max_intervals = 2e6,
+  write_iterations = 1L,
+  write_warmup = 0L,
+  verbose = TRUE
+)
+```
+
 ### Benchmark result contract
 
 The returned object contains:
@@ -985,8 +1081,8 @@ SKIP 0
 - **0.7.1**: block-streamed exact statistics and first reader optimization.
 - **0.7.2**: indexed retrieval refinement and live/peak heap diagnostics.
 - **0.7.3**: multi-region native BigWig writer profiling and zoom-overhead metrics.
-- **0.7.4**: bounded writer benchmarking, interval-density guards, and progress diagnostics — current stage.
-- **0.7.5**: conditional native writer optimization if the bounded benchmark justifies it.
+- **0.7.4**: bounded writer benchmarking, interval-density guards, and progress diagnostics.
+- **0.7.5**: vectorized first-level and hierarchical higher-level BigWig zoom construction — current stage.
 - **0.8.x**: statistics and zoom refinements where justified by benchmarks.
 - **0.9.x**: API freeze, cross-platform checks, and release hardening.
 - **1.0.0**: stable public release.
