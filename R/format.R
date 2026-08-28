@@ -1,23 +1,55 @@
 # Author: Rensc
 # Date: 2026-08-28
-# Version: dev002
-# Function: Detect supported genomic signal formats
+# Version: dev003
+# Function: Detect supported genomic signal formats without decoding binary files as text
 # Input: Local file path
 # Output: Standardized format name
 
+bw_has_bigwig_magic <- function(x) {
+  if (!is.raw(x) || length(x) < 4L) {
+    return(FALSE)
+  }
+  bytes <- as.integer(x[seq_len(4L)])
+  identical(bytes, c(38L, 252L, 143L, 136L)) ||
+    identical(bytes, c(136L, 143L, 252L, 38L))
+}
+
+bw_raw_looks_binary <- function(x) {
+  if (!is.raw(x) || length(x) == 0L) {
+    return(FALSE)
+  }
+  bytes <- as.integer(x)
+  controls <- bytes < 32L & !bytes %in% c(9L, 10L, 13L)
+  any(bytes == 0L) || mean(controls) > 0.01
+}
+
+bw_read_format_probe <- function(file, n = 4096L) {
+  con <- base::file(file, open = "rb")
+  on.exit(close(con), add = TRUE)
+  readBin(con, what = "raw", n = as.integer(n), size = 1L)
+}
+
 #' Detect genomic signal file format
+#'
+#' BigWig detection is based on its four-byte binary signature before any text
+#' decoding is attempted. This keeps format detection safe for binary files and
+#' for installations whose paths are not represented internally as UTF-8.
 #'
 #' @param file Local signal file path.
 #' @return One of `bigwig`, `wig`, or `bedgraph`.
 #' @export
 detect_bwg_format <- function(file) {
   file <- bw_validate_local_file(file)
-  lower <- tolower(basename(file))
-  lower <- sub("\\.(gz|bgz)$", "", lower)
 
-  if (grepl("\\.(bigwig|bw)$", lower)) {
+  probe <- bw_read_format_probe(file)
+  if (bw_has_bigwig_magic(probe)) {
     return("bigwig")
   }
+
+  display_path <- bw_safe_text(file, fallback = "")
+  lower <- tolower(basename(display_path))
+  lower <- sub("\\.(gz|bgz)$", "", lower)
+
   if (grepl("\\.wig$", lower)) {
     return("wig")
   }
@@ -25,25 +57,25 @@ detect_bwg_format <- function(file) {
     return("bedgraph")
   }
 
-  con <- base::file(file, open = "rb")
-  on.exit(close(con), add = TRUE)
-  magic <- readBin(con, what = "raw", n = 4L, size = 1L)
-  if (length(magic) == 4L) {
-    little <- bw_uint(magic, 0L, 4L, "little")
-    big <- bw_uint(magic, 0L, 4L, "big")
-    if (little == .BWT_BIGWIG_MAGIC || big == .BWT_BIGWIG_MAGIC) {
-      return("bigwig")
-    }
+  compressed <- grepl("\\.(gz|bgz)$", tolower(display_path))
+  if (!compressed && bw_raw_looks_binary(probe)) {
+    bw_stop(
+      "The input is a binary file but does not contain a valid BigWig signature."
+    )
   }
 
-  text_con <- if (grepl("\\.(gz|bgz)$", tolower(file))) {
+  text_con <- if (compressed) {
     gzfile(file, open = "rt")
   } else {
     base::file(file, open = "rt")
   }
   on.exit(close(text_con), add = TRUE)
+
   lines <- readLines(text_con, n = 50L, warn = FALSE)
-  lines <- trimws(lines)
+  if (length(lines) > 0L) {
+    lines <- bw_safe_text(lines, fallback = "")
+    lines <- trimws(lines)
+  }
   lines <- lines[nzchar(lines) & !grepl("^(#|browser|track)", lines, ignore.case = TRUE)]
   if (length(lines) == 0L) {
     bw_stop("Unable to detect the signal file format from an empty file.")
@@ -55,5 +87,5 @@ detect_bwg_format <- function(file) {
   if (length(fields) >= 4L) {
     return("bedgraph")
   }
-  bw_stop(paste0("Unable to detect signal format for: ", file))
+  bw_stop(paste0("Unable to detect signal format for: ", bw_safe_text(file, fallback = "<path>")))
 }

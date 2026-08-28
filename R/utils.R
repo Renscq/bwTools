@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-27
-# Version: dev001
+# Version: dev002
 # Function: Provide common validation and path utilities
 # Input: User arguments
 # Output: Validated values
@@ -13,14 +13,15 @@ bw_validate_local_file <- function(file) {
   if (!is.character(file) || length(file) != 1L || is.na(file) || !nzchar(file)) {
     bw_stop("`file` must be a single non-missing character string.")
   }
-  if (grepl("^(https?|ftp)://", file, ignore.case = TRUE)) {
+  display_file <- bw_safe_text(file, fallback = "<path>")
+  if (grepl("^(https?|ftp)://", display_file, ignore.case = TRUE)) {
     bw_stop("Remote files are not supported by the current native R backend.")
   }
-  if (grepl("^file://", file, ignore.case = TRUE)) {
+  if (grepl("^file://", display_file, ignore.case = TRUE)) {
     bw_stop("Use a local file path instead of a file:// URI.")
   }
   if (!file.exists(file)) {
-    bw_stop(paste0("Signal file does not exist: ", file))
+    bw_stop(paste0("Signal file does not exist: ", display_file))
   }
   normalizePath(file, winslash = "/", mustWork = TRUE)
 }
@@ -38,10 +39,22 @@ bw_recycle_argument <- function(x, n, name, default = NULL) {
   x
 }
 
+bw_safe_text <- function(x, fallback = "") {
+  x <- as.character(x)
+  out <- suppressWarnings(iconv(x, from = "", to = "UTF-8", sub = "_"))
+  bad <- is.na(out)
+  if (any(bad)) {
+    out[bad] <- fallback
+  }
+  out
+}
+
 bw_file_stem <- function(file) {
-  name <- basename(file)
+  display_path <- bw_safe_text(file, fallback = "sample")
+  name <- basename(display_path)
   name <- sub("\\.(gz|bgz)$", "", name, ignore.case = TRUE)
-  sub("\\.(bigwig|bw|wig|bedgraph|bdg)$", "", name, ignore.case = TRUE)
+  name <- sub("\\.(bigwig|bw|wig|bedgraph|bdg)$", "", name, ignore.case = TRUE)
+  if (!nzchar(name)) "sample" else name
 }
 
 bw_empty_signal <- function(include_sample = FALSE) {

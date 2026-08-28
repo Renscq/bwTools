@@ -205,6 +205,16 @@ Acceptance criteria:
 - GeneTrackR can later integrate by depending only on documented bwTools
   exports and `inst/API_CONTRACT.md`.
 
+## 0.6.2 - Binary-safe reader hardening
+
+- Detect BigWig by raw four-byte magic before any text decoding.
+- Reject unknown binary inputs before `readLines()` / `trimws()`.
+- Keep path values unchanged for file access while normalizing display-only
+  path text safely.
+- Skip unnecessary filename-stem derivation when explicit `sample_ids` are
+  supplied.
+- Lock these behaviors with format-detection regression tests.
+
 ## 0.7.x - Large-file performance profiling
 
 Planned:

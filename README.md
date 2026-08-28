@@ -1,13 +1,14 @@
 # bwTools
 
-Current development release: **0.6.1**
+Current development release: **0.6.2**
 
 `bwTools` provides native-R reading, writing, indexed retrieval, merging, and
 statistics for BigWig, WIG, and bedGraph genomic signal tracks.
 
-The 0.6.1 release standardizes the public API and the `BwgTrack` object contract
+The 0.6.x series standardizes the public API and the `BwgTrack` object contract
 so downstream packages can use bwTools without depending on internal list
-implementation details.
+implementation details. Version 0.6.2 also makes BigWig detection binary-safe
+before any text decoding is attempted.
 
 ## Core principles
 
@@ -17,6 +18,7 @@ implementation details.
 - Public in-memory coordinates are always **1-based closed**.
 - BigWig and bedGraph disk coordinates remain **0-based half-open**.
 - BigWig files use lazy indexed access by default.
+- BigWig format detection checks the binary magic signature before text decoding.
 - All analysis functions operate on a validated `BwgTrack` object.
 - Only `read_bwg()` reads signal files.
 - Only `write_bwg()` writes signal files.
@@ -600,7 +602,8 @@ SKIP 0
 - **0.3.x**: BigWig zoom levels and interval statistics — implemented.
 - **0.4.x**: unified indexed genomic retrieval — implemented.
 - **0.5.x**: automatic merge and explicit signal aggregation — implemented.
-- **0.6.1**: standardized public API and BwgTrack schema v2 — current stage.
+- **0.6.1**: standardized public API and BwgTrack schema v2.
+- **0.6.2**: hardened BigWig detection and path-encoding safety — current stage.
 - **0.7.x**: large-file profiling and performance optimization.
 - **0.8.x**: statistics and zoom refinements where justified by benchmarks.
 - **0.9.x**: API freeze, cross-platform checks, and release hardening.

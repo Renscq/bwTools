@@ -13,5 +13,7 @@ detect_bwg_format(file)
 One of \code{bigwig}, \code{wig}, or \code{bedgraph}.
 }
 \description{
-Detect genomic signal file format
+BigWig detection is based on its four-byte binary signature before any text
+decoding is attempted. This keeps format detection safe for binary files and
+for installations whose paths are not represented internally as UTF-8.
 }

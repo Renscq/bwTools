@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-28
-# Version: dev003
+# Version: dev004
 # Function: Read BigWig, WIG, and bedGraph files into standardized BwgTrack objects
 # Input: One or more local genomic signal files
 # Output: Validated BwgTrack object
@@ -34,8 +34,11 @@ read_bwg <- function(
   files <- vapply(files, bw_validate_local_file, character(1L), USE.NAMES = FALSE)
   n <- length(files)
 
-  default_ids <- vapply(files, bw_file_stem, character(1L), USE.NAMES = FALSE)
-  sample_ids <- bw_recycle_argument(sample_ids, n, "sample_ids", default = default_ids)
+  if (is.null(sample_ids)) {
+    sample_ids <- vapply(files, bw_file_stem, character(1L), USE.NAMES = FALSE)
+  } else {
+    sample_ids <- bw_recycle_argument(sample_ids, n, "sample_ids")
+  }
   sample_ids <- as.character(sample_ids)
   if (anyNA(sample_ids) || any(!nzchar(sample_ids))) {
     bw_stop("`sample_ids` must be non-missing and non-empty.")

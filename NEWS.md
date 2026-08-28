@@ -1,3 +1,20 @@
+# bwTools 0.6.2
+
+## Binary-safe format detection
+
+- Fixed `read_bwg()` failures where a BigWig file could fall through to the
+  text-format probe and trigger an invalid UTF-8 error in `trimws()`.
+- Changed `detect_bwg_format()` to inspect the BigWig four-byte magic signature
+  before any filename or text decoding.
+- Added a binary guard so unrecognized binary inputs fail with a format error
+  instead of being passed to `readLines()`.
+- Made display-only path handling UTF-8 safe without changing the path used for
+  file access.
+- Avoided deriving filename-based sample IDs when `sample_ids` is supplied
+  explicitly.
+- Added regression coverage for BigWig files without a standard filename
+  extension and for unrecognized binary input.
+
 # bwTools 0.6.1
 
 ## Standardized public API
