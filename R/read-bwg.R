@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-28
-# Version: dev005
+# Version: dev006
 # Function: Read BigWig, WIG, and bedGraph files into standardized BwgTrack objects
 # Input: One or more local genomic signal files
 # Output: Validated BwgTrack object
@@ -26,8 +26,8 @@ read_bwg <- function(
   strand = "*",
   mode = c("auto", "memory", "lazy")
 ) {
-  format <- match.arg(format)
-  mode <- match.arg(mode)
+  format <- bw_match_arg(format, c("auto", "bigwig", "wig", "bedgraph"), "format")
+  mode <- bw_match_arg(mode, c("auto", "memory", "lazy"), "mode")
   if (!is.character(files) || length(files) < 1L || anyNA(files)) {
     bw_stop("`files` must contain one or more local file paths.")
   }

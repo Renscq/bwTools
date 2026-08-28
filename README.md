@@ -1,139 +1,76 @@
+---
+title: "bwTools"
+format: gfm
+execute:
+  echo: true
+  eval: false
+---
+
 # bwTools
 
-Current development release: **0.7.5**
+Current development release: **0.8.0**
 
-`bwTools` provides native-R reading, writing, indexed retrieval, merging, and
-statistics for BigWig, WIG, and bedGraph genomic signal tracks.
+`bwTools` provides native-R reading, writing, indexed retrieval, merging,
+statistics, and performance diagnostics for BigWig, WIG, and bedGraph genomic
+signal tracks.
 
-The 0.6.x series standardized the public API and the `BwgTrack` object contract
-so downstream packages can use bwTools without depending on internal list
-implementation details. Version 0.7.0 established reproducible large-BigWig
-benchmarks; version 0.7.1 introduced block-streamed exact statistics, version
-0.7.2 refined indexed retrieval and memory diagnostics, version 0.7.3 added
-native-writer profiling, version 0.7.4 bounded expensive writer benchmarks, and
-version 0.7.5 replaces repeated full-signal zoom scans with hierarchical zoom
-construction.
+Version 0.8.0 is the **API-stability release** before downstream integration.
+The BigWig reader, writer, zoom pyramid, indexed retrieval, and exact/zoom
+statistics established in 0.7.x are retained. This release standardizes public
+argument validation, error conditions, return schemas, cross-format behavior,
+and user-facing documentation.
 
-## Core principles
+## Design principles
 
 - BigWig binary I/O is implemented in R.
 - No UCSC `bedGraphToBigWig` executable is required.
 - No Rcpp or bundled C/C++ runtime is required.
 - Public in-memory coordinates are always **1-based closed**.
-- BigWig and bedGraph disk coordinates remain **0-based half-open**.
-- BigWig files use lazy indexed access by default.
-- BigWig format detection checks the binary magic signature before text decoding.
-- All normal analysis functions operate on a validated `BwgTrack` object.
-- Signal ingestion is centralized in `read_bwg()`; `benchmark_bwg()` is a diagnostic file-I/O exception.
-- Only `write_bwg()` writes signal files.
-- Performance changes are benchmark-driven rather than assumption-driven.
+- BigWig and bedGraph disk coordinates are **0-based half-open**.
+- BigWig inputs use lazy indexed access by default.
+- Normal analysis functions operate on a validated `BwgTrack`.
+- `read_bwg()` is the normal file-ingestion entry point.
+- `write_bwg()` is the only normal signal-file persistence function.
+- `benchmark_bwg()` is an advanced diagnostic utility, not part of routine
+  analysis.
 
-## Standard public API
+## Public API
 
-| Function | Responsibility | Primary return |
+| Function | Responsibility | Return |
 | --- | --- | --- |
-| `detect_bwg_format()` | Detect file format | character |
-| `read_bwg()` | Read files into bwTools | `BwgTrack` |
-| `bwg_track()` | Construct an in-memory/lazy track | `BwgTrack` |
-| `validate_bwg()` | Validate the public object contract | invisible `BwgTrack` |
-| `is_bwg_track()` | Test the public object contract | logical |
+| `detect_bwg_format()` | Detect BigWig/WIG/bedGraph | character |
+| `read_bwg()` | Read signal files | `BwgTrack` |
+| `bwg_track()` | Construct a standardized track | `BwgTrack` |
+| `validate_bwg()` | Validate the object contract | invisible `BwgTrack` |
+| `is_bwg_track()` | Test the object contract | logical |
 | `samples_bwg()` | Access sample metadata | data.table |
 | `seqinfo_bwg()` | Access chromosome metadata | data.table |
+| `metadata_bwg()` | Access object metadata | list |
 | `zoominfo_bwg()` | Access BigWig zoom metadata | data.table |
 | `retrieve_bwg()` | Retrieve genomic regions | data.table / `BwgTrack` |
 | `merge_bwg()` | Merge or aggregate tracks | `BwgTrack` |
-| `metadata_bwg()` | Access object metadata | list |
 | `stats_bwg()` | Calculate interval statistics | data.table |
 | `summary_bwg()` | Summarize a track | one-row data.table |
-| `write_bwg()` | Persist signal tracks | invisible manifest data.table |
-| `benchmark_bwg()` | Benchmark large BigWig workflows | `bwToolsBenchmark` |
+| `write_bwg()` | Write BigWig/WIG/bedGraph | invisible manifest |
+| `benchmark_bwg()` | Profile large BigWig workflows | `bwToolsBenchmark` |
 
-The old public names `bw_track()` and `bw_detect_format()` are removed in
-0.6.1. Use `bwg_track()` and `detect_bwg_format()`.
+The parameter names and core return schemas above are regression-tested in
+0.8.0 so downstream packages can treat them as the integration boundary.
 
-## Standard argument names
+## Installation
 
-The public API follows these naming rules:
+Install the source package with your normal R package workflow. During package
+development:
 
-```{text}
-files       file paths passed to read_bwg()
-file        one BigWig path passed to benchmark_bwg()
-x           one BwgTrack object
-sample_ids  sample identifiers or sample selection
-samples     sample metadata table used by bwg_track()
-regions     genomic interval table
-chrom       chromosome for a single-region operation
-start       1-based closed start
-end         1-based closed end
-outdir      output directory used only by write_bwg()
+```{r}
+devtools::document()
+devtools::test()
+devtools::check()
 ```
-
-`sample_names` and selector arguments named `samples` are no longer used.
-
-## BwgTrack contract
-
-A valid object contains exactly four public components:
-
-```{text}
-BwgTrack
-├── samples
-├── data
-├── seqinfo
-└── meta
-```
-
-### samples
-
-Required core columns:
-
-```{text}
-sample_id  file  format  strand  has_strand
-```
-
-- `sample_id` is unique and non-empty.
-- `strand` is `+`, `-`, or `*`.
-- `has_strand` is derived from `strand`.
-- `format` uses `bigwig`, `wig`, `bedgraph`, or `memory`.
-
-### data
-
-Memory-mode signal uses:
-
-```{text}
-sample_id  chrom  start  end  value  strand
-```
-
-Coordinates are 1-based closed. Values must be finite numeric values.
-The standardized schema stores `start` and `end` as integer columns.
-
-For lazy BigWig tracks, `data` is `NULL`.
-
-### seqinfo
-
-Standard chromosome metadata uses:
-
-```{text}
-sample_id  chrom  length
-```
-
-Unknown text-format chromosome lengths are represented by `NA`.
-
-### meta
-
-Every object contains:
-
-```{text}
-coordinate     = "1-based closed"
-schema_version = "2"
-backend        = "bwTools-native-R"
-mode           = "memory" or "lazy"
-```
-
-Downstream packages should use the public accessors whenever possible instead
-of relying directly on internal list fields. Use `metadata_bwg()` for operation,
-provenance, and schema metadata.
 
 ## Bundled example data
+
+The package contains a small reference dataset:
 
 ```{r}
 library(bwTools)
@@ -160,21 +97,26 @@ chrom_sizes_file <- system.file(
 )
 ```
 
-## 1. Detect a file format
+## 1. Detect file format
 
 ```{r}
-stopifnot(
-  identical(detect_bwg_format(bw_file), "bigwig"),
-  identical(detect_bwg_format(bedgraph_file), "bedgraph")
-)
+detect_bwg_format(bw_file)
+detect_bwg_format(bedgraph_file)
 ```
 
-## 2. Read tracks
+Expected formats:
 
-`mode = "auto"` is the default.
+```{text}
+bigwig
+bedgraph
+```
 
-- all-BigWig input -> lazy mode;
-- WIG or bedGraph input -> memory mode.
+BigWig detection checks the binary magic signature before attempting any text
+parsing, so file extensions are not required for valid BigWig files.
+
+## 2. Read signal tracks
+
+### BigWig
 
 ```{r}
 bw <- read_bwg(
@@ -182,18 +124,23 @@ bw <- read_bwg(
   sample_ids = "example"
 )
 
-bedgraph <- read_bwg(
-  bedgraph_file,
-  sample_ids = "example"
-)
-
-stopifnot(
-  identical(summary_bwg(bw)$mode, "lazy"),
-  identical(summary_bwg(bedgraph)$mode, "memory")
-)
+bw
+summary_bwg(bw)
 ```
 
-Use explicit loading only when needed:
+`mode = "auto"` is the default. A BigWig-only input becomes a lazy track:
+
+```{text}
+file
+  ↓
+read_bwg()
+  ↓
+lazy BwgTrack
+  ↓
+indexed region access
+```
+
+You can explicitly load a small BigWig into memory:
 
 ```{r}
 bw_memory <- read_bwg(
@@ -203,61 +150,99 @@ bw_memory <- read_bwg(
 )
 ```
 
-For large RNA-seq and Ribo-seq BigWig tracks, lazy mode is recommended.
+### bedGraph and WIG
 
-## 3. Validate the object contract
+Text formats are read into memory:
 
 ```{r}
-validate_bwg(bw)
-stopifnot(is_bwg_track(bw))
+bg <- read_bwg(
+  bedgraph_file,
+  sample_ids = "example"
+)
+
+summary_bwg(bg)
 ```
 
-Inspect standardized metadata:
+Mixed BigWig/text inputs use memory mode because lazy mode is currently a
+BigWig-only contract.
+
+## 3. BwgTrack object contract
+
+A standardized track contains four components:
+
+```{text}
+BwgTrack
+├── samples
+├── data
+├── seqinfo
+└── meta
+```
+
+Core `samples` columns:
+
+```{text}
+sample_id  file  format  strand  has_strand
+```
+
+Core memory-mode `data` columns:
+
+```{text}
+sample_id  chrom  start  end  value  strand
+```
+
+Core `seqinfo` columns:
+
+```{text}
+sample_id  chrom  length
+```
+
+Required metadata:
+
+```{text}
+coordinate     = "1-based closed"
+schema_version = "2"
+backend        = "bwTools-native-R"
+mode           = "memory" or "lazy"
+```
+
+Use the public accessors instead of depending on private implementation details:
 
 ```{r}
 samples_bwg(bw)
 seqinfo_bwg(bw)
-summary_bwg(bw)
+metadata_bwg(bw)
+zoominfo_bwg(bw)
 ```
 
-Expected chromosome lengths for the bundled BigWig are:
+Validate an externally constructed object before passing it to downstream code:
 
 ```{r}
-seqinfo <- seqinfo_bwg(bw)
-
-stopifnot(
-  identical(seqinfo$chrom, c("chr1", "chr2", "chr3")),
-  identical(seqinfo$length, c(10000L, 8000L, 5000L))
-)
+validate_bwg(bw)
+is_bwg_track(bw)
 ```
 
-## 4. Retrieve genomic signal
+## 4. Retrieve genomic regions
 
-Single region:
+For a single region:
 
 ```{r}
 signal <- retrieve_bwg(
   bw,
   chrom = "chr1",
-  start = 450L,
+  start = 500L,
   end = 1600L
 )
 
-stopifnot(
-  nrow(signal) > 0L,
-  all(signal$chrom == "chr1"),
-  all(signal$start >= 450L),
-  all(signal$end <= 1600L)
-)
+signal
 ```
 
-Multiple regions:
+For multiple regions:
 
 ```{r}
 regions <- data.frame(
-  chrom = c("chr1", "chr2"),
-  start = c(500L, 450L),
-  end = c(900L, 800L)
+  chrom = c("chr1", "chr1", "chr2"),
+  start = c(510L, 561L, 450L),
+  end = c(560L, 600L, 900L)
 )
 
 signal_multi <- retrieve_bwg(
@@ -266,8 +251,11 @@ signal_multi <- retrieve_bwg(
 )
 ```
 
-Return a write-ready `BwgTrack` when the retrieved signal needs further package
-operations:
+Overlapping or directly adjacent query regions are merged before retrieval.
+Signal intervals crossing query boundaries are clipped, but genomic coordinates
+are never rebased.
+
+If the result will be used by another bwTools function, request a `BwgTrack`:
 
 ```{r}
 region_track <- retrieve_bwg(
@@ -275,133 +263,32 @@ region_track <- retrieve_bwg(
   regions = regions,
   result = "track"
 )
-
-validate_bwg(region_track)
 ```
 
-Sample selection always uses `sample_ids`:
-
-```{r}
-signal_one_sample <- retrieve_bwg(
-  bw,
-  chrom = "chr1",
-  start = 500L,
-  end = 900L,
-  sample_ids = "example"
-)
-```
-
-## 5. Merge tracks
-
-The default merge is conservative and requires no prior classification of the
-input samples or genomic intervals. The following two tracks contain the same
-sample on different regions:
-
-```{r}
-track_a <- bwg_track(
-  samples = data.frame(sample_id = "sampleA"),
-  data = data.frame(
-    sample_id = "sampleA",
-    chrom = "chr1",
-    start = 1L,
-    end = 100L,
-    value = 2,
-    strand = "*"
-  )
-)
-
-track_b <- bwg_track(
-  samples = data.frame(sample_id = "sampleA"),
-  data = data.frame(
-    sample_id = "sampleA",
-    chrom = "chr1",
-    start = 201L,
-    end = 300L,
-    value = 4,
-    strand = "*"
-  )
-)
-
-merged <- merge_bwg(track_a, track_b)
-stopifnot(nrow(merged$data) == 2L)
-```
-
-Default `method = "auto"` behavior:
+This cleanly separates retrieval from persistence:
 
 ```{text}
-different sample IDs
-  -> preserve samples independently
-
-same sample, non-overlapping regions
-  -> append directly
-
-same sample, identical records
-  -> deduplicate
-
-same sample, overlapping equal values
-  -> merge safely
-
-same sample, overlapping different values
-  -> error and require explicit mean or sum
+retrieve_bwg()
+      ↓
+BwgTrack
+      ↓
+write_bwg()
 ```
 
-Explicit arithmetic aggregation uses overlapping tracks. Here the sample ID
-is the same and the overlapping values differ, so `method = "auto"` would stop
-and require an explicit arithmetic rule:
+## 5. Interval statistics
 
-```{r}
-overlap_a <- bwg_track(
-  samples = data.frame(sample_id = "sampleA"),
-  data = data.frame(
-    sample_id = "sampleA", chrom = "chr1",
-    start = 1L, end = 100L, value = 2, strand = "*"
-  )
-)
+Supported statistics:
 
-overlap_b <- bwg_track(
-  samples = data.frame(sample_id = "sampleA"),
-  data = data.frame(
-    sample_id = "sampleA", chrom = "chr1",
-    start = 51L, end = 150L, value = 4, strand = "*"
-  )
-)
-
-merged_mean <- merge_bwg(
-  overlap_a,
-  overlap_b,
-  method = "mean"
-)
-
-merged_sum <- merge_bwg(
-  overlap_a,
-  overlap_b,
-  method = "sum"
-)
+```{text}
+mean
+stdev
+max
+min
+coverage
+sum
 ```
 
-For means, the missing-signal rule is explicit:
-
-```{r}
-mean_ignore <- merge_bwg(
-  overlap_a,
-  overlap_b,
-  method = "mean",
-  missing = "ignore"
-)
-
-mean_zero <- merge_bwg(
-  overlap_a,
-  overlap_b,
-  method = "mean",
-  missing = "zero"
-)
-```
-
-## 6. Calculate statistics
-
-All statistics operate on `BwgTrack`; pass files through `read_bwg()` first.
-
-Exact full-resolution calculation:
+Exact full-resolution statistics:
 
 ```{r}
 exact_stats <- stats_bwg(
@@ -415,7 +302,7 @@ exact_stats <- stats_bwg(
 )
 ```
 
-Fast lazy BigWig calculation:
+Fast zoom-aware statistics:
 
 ```{r}
 fast_stats <- stats_bwg(
@@ -429,165 +316,192 @@ fast_stats <- stats_bwg(
 )
 ```
 
-Supported statistics:
+`use_zoom = TRUE` means “allow an appropriate BigWig zoom level”. Small
+high-resolution queries may automatically fall back to full-resolution data.
+Inspect the output columns:
 
 ```{text}
-mean
-stdev
-min
-max
-coverage
-sum
+source      full or zoom
+resolution  zoom reduction level, or NA for full
 ```
 
-For final quantitative analyses, use `use_zoom = FALSE` when exact values are
-required.
+For final quantitative calculations where exact boundary behavior matters, use
+`use_zoom = FALSE`.
 
-## 7. Inspect BigWig zoom levels
+## 6. Merge signal tracks
 
-Zoom metadata are accessed from the track, not directly from a path:
+`merge_bwg()` is the only public merge interface.
+
+### Automatic lossless merge
 
 ```{r}
-zoom_info <- zoominfo_bwg(bw)
-print(zoom_info)
+merged <- merge_bwg(track_a, track_b)
 ```
 
-Expected columns:
+Default `method = "auto"` follows conservative rules:
 
-```{text}
-sample_id  level  data_offset  index_offset
-```
+- different sample IDs remain different samples;
+- non-overlapping segments from the same sample are appended;
+- exact duplicate records are deduplicated;
+- equal-valued overlaps are normalized;
+- conflicting overlapping values in the same sample raise an error instead of
+  silently choosing a numerical rule.
 
-## 8. Write tracks
-
-All persistence and format conversion are handled by `write_bwg()`.
+### Explicit mean or sum
 
 ```{r}
-test_root <- file.path(tempdir(), "bwtools_api_test")
-dir.create(test_root, recursive = TRUE, showWarnings = FALSE)
-
-written <- write_bwg(
-  bedgraph,
-  outdir = test_root,
-  format = "bigwig",
-  chrom_sizes = chrom_sizes_file,
-  overwrite = TRUE
+merged_mean <- merge_bwg(
+  track_a,
+  track_b,
+  method = "mean"
 )
 
-stopifnot(file.exists(written$file))
-```
-
-Write one selected sample:
-
-```{r}
-write_bwg(
-  bedgraph,
-  outdir = file.path(test_root, "selected"),
-  format = "bigwig",
-  sample_ids = "example",
-  chrom_sizes = chrom_sizes_file,
-  overwrite = TRUE
+merged_sum <- merge_bwg(
+  track_a,
+  track_b,
+  method = "sum"
 )
 ```
 
-BigWig writer options remain writer-specific:
+For means, missing coverage is explicit:
 
 ```{r}
-write_bwg(
-  bedgraph,
-  outdir = file.path(test_root, "zoom"),
+merged_ignore <- merge_bwg(
+  track_a,
+  track_b,
+  method = "mean",
+  missing = "ignore"
+)
+
+merged_zero <- merge_bwg(
+  track_a,
+  track_b,
+  method = "mean",
+  missing = "zero"
+)
+```
+
+Replicates can be grouped with `groups` when arithmetic aggregation is needed.
+
+## 7. Write signal files
+
+All persistence is centralized in `write_bwg()`.
+
+### BigWig
+
+```{r}
+manifest_bw <- write_bwg(
+  region_track,
+  outdir = "output_bigwig",
   format = "bigwig",
-  chrom_sizes = chrom_sizes_file,
+  overwrite = TRUE
+)
+
+manifest_bw
+```
+
+Native BigWig output includes zoom levels by default. Disable them explicitly:
+
+```{r}
+manifest_nozoom <- write_bwg(
+  region_track,
+  outdir = "output_bigwig_nozoom",
+  format = "bigwig",
   overwrite = TRUE,
-  zoom = TRUE,
-  max_zoom_levels = 10L
+  zoom = FALSE
 )
 ```
 
-They are not duplicated in retrieval or merge functions.
+`max_zoom_levels = 0L` is also valid and produces no zoom levels.
 
-## 9. Construct a BwgTrack manually
-
-External packages can construct the same contract through `bwg_track()`:
+### WIG
 
 ```{r}
-x <- bwg_track(
-  samples = data.frame(
-    sample_id = "sampleA",
-    strand = "+"
-  ),
-  data = data.frame(
-    sample_id = "sampleA",
-    chrom = "chr1",
-    start = 101L,
-    end = 125L,
-    value = 8.5,
-    strand = "+"
-  ),
-  seqinfo = data.frame(
-    chrom = "chr1",
-    length = 1000000L
-  )
+manifest_wig <- write_bwg(
+  region_track,
+  outdir = "output_wig",
+  format = "wig",
+  overwrite = TRUE
 )
-
-validate_bwg(x)
 ```
 
-`bwg_track()` normalizes missing standard fields. For example, the sample table
-above receives `file`, `format`, and `has_strand` automatically, while seqinfo
-without `sample_id` is expanded to the object's samples.
-
-## 10. Recommended downstream-package integration
-
-Downstream packages should use this pattern:
+### bedGraph
 
 ```{r}
-x <- read_bwg(files, sample_ids = sample_ids)
-validate_bwg(x)
-
-sample_meta <- samples_bwg(x)
-chrom_meta <- seqinfo_bwg(x)
-track_meta <- metadata_bwg(x)
-
-signal <- retrieve_bwg(
-  x,
-  chrom = chrom,
-  start = start,
-  end = end,
-  sample_ids = sample_ids
+manifest_bg <- write_bwg(
+  region_track,
+  outdir = "output_bedgraph",
+  format = "bedgraph",
+  overwrite = TRUE
 )
 ```
 
-Do not depend on private functions such as:
+For WIG and bedGraph, enable gzip output with:
 
-```{text}
-bwTools:::bw_metadata()
-bwTools:::bw_bigwig_query()
-bwTools:::bw_read_index_header()
+```{r}
+write_bwg(
+  region_track,
+  outdir = "output_gz",
+  format = "bedgraph",
+  overwrite = TRUE,
+  compress = TRUE
+)
 ```
 
-The public contract is the integration boundary.
-
-
-## 11. Benchmark a large BigWig file
-
-`benchmark_bwg()` is a diagnostic exception to the normal object-only analysis
-contract because its purpose is to measure file I/O itself. It accepts one local
-BigWig file and returns a structured `bwToolsBenchmark` object; it does not write
-benchmark reports automatically.
-
-The default suite is deliberately safe for large files:
+The returned manifest always uses:
 
 ```{text}
-read_lazy   package-metadata-cold and cached lazy loading
-retrieve    indexed retrieval at multiple genomic scales
-stats_zoom  zoom-enabled statistics
-stats_full  exact statistics only below full_stats_max_bases
+sample_id  file  format
 ```
 
-The default centered benchmark windows are 10 kb, 1 Mb, and 10 Mb on the
-largest chromosome. For real performance work, explicit representative regions
-are preferred because signal density can vary substantially across a genome.
+## 8. Cross-format workflow
+
+The standard conversion workflow is always:
+
+```{text}
+input file
+   ↓
+read_bwg()
+   ↓
+BwgTrack
+   ↓
+write_bwg()
+   ↓
+BigWig / WIG / bedGraph
+```
+
+Do not perform format conversion inside `retrieve_bwg()`, `merge_bwg()`, or
+`stats_bwg()`.
+
+## 9. Standardized errors
+
+Errors generated intentionally by the public bwTools API inherit from
+`bwTools_error`.
+
+Downstream packages can therefore catch them without matching a particular
+message:
+
+```{r}
+tryCatch(
+  stats_bwg(
+    bw,
+    chrom = "chr1",
+    start = 0L,
+    end = 100L
+  ),
+  bwTools_error = function(e) {
+    message("bwTools input error: ", conditionMessage(e))
+  }
+)
+```
+
+Error messages remain human-readable, but downstream integration should prefer
+the condition class when control flow depends on an error.
+
+## 10. Advanced performance diagnostics
+
+`benchmark_bwg()` is intended for development and performance diagnosis. It is
+not required in normal analysis.
 
 ```{r}
 bench <- benchmark_bwg(
@@ -599,170 +513,10 @@ bench <- benchmark_bwg(
   warmup = 1L
 )
 
-bench
 bench$summary
 ```
 
-For a representative dense and sparse region set:
-
-```{r}
-benchmark_regions <- data.frame(
-  chrom = c("chr1", "chr1", "chr2"),
-  start = c(1000001L, 50000001L, 20000001L),
-  end = c(1010000L, 51000000L, 30000000L)
-)
-
-bench <- benchmark_bwg(
-  "/data/sample.bigwig",
-  regions = benchmark_regions,
-  iterations = 3L
-)
-```
-
-Optional operations are explicit:
-
-```{r}
-bench_io <- benchmark_bwg(
-  "/data/sample.bigwig",
-  operations = c(
-    "read_lazy",
-    "retrieve",
-    "stats_zoom",
-    "stats_full",
-    "merge",
-    "write"
-  )
-)
-```
-
-`merge` materializes four non-overlapping parts of the largest selected region
-before timing `merge_bwg()`. `write` materializes each selected benchmark region
-*before* writer timing, then benchmarks `write_bwg()` with `zoom = FALSE` and,
-when the signal density is within the configured safety bound, `zoom = TRUE`.
-Indexed retrieval is therefore excluded from writer timing itself.
-
-Writer profiling uses independent conservative repetition controls:
-
-```{text}
-write_iterations = 1L
-write_warmup      = 0L
-```
-
-The general `iterations` and `warmup` arguments continue to control read,
-retrieve, statistics, merge, and memory-read cases. A warmup is now executed
-once per benchmark case rather than once before every timed iteration.
-
-Writer safety uses both genomic size and actual signal density:
-
-```{text}
-write_max_bases            maximum genomic span for writer profiling
-write_max_intervals        maximum intervals for any writer case
-write_zoom_max_intervals   stricter interval limit for zoom_on
-```
-
-This matters for dense RNA-seq/Ribo-seq BigWig files: a 5 Mb region can contain
-well over one million intervals even though its genomic span appears modest.
-`verbose = TRUE` prints concise progress messages so an expensive writer case is
-never indistinguishable from a stalled R session.
-
-Full-file memory loading is never part of the default suite. It must be selected
-explicitly:
-
-```{r}
-bench_memory <- benchmark_bwg(
-  "/data/sample.bigwig",
-  operations = "read_memory",
-  iterations = 1L,
-  warmup = 0L
-)
-```
-
-For multi-gigabyte files, `read_memory` may require much more RAM than the
-compressed BigWig file size and can terminate the R process if system memory is
-insufficient.
-
-### 0.7.2 benchmark-driven retrieval refinement
-
-Version 0.7.2 keeps the block-streamed exact-statistics path introduced in 0.7.1
-and changes only the indexed-retrieval materialization strategy and benchmark
-memory reporting.
-
-The 0.7.1 real-file benchmark showed that streaming exact statistics substantially
-reduced elapsed time, while the growable-vector retrieval path did not improve
-large indexed queries consistently. Version 0.7.2 therefore retains the
-successful statistics path and replaces repeated vector growth with chunked
-primitive vectors:
-
-```{text}
-stats_bwg(use_zoom = FALSE)
-  BigWig R-tree -> one compressed block -> bin accumulators -> next block
-
-retrieve_bwg()
-  BigWig blocks -> primitive vector chunks -> one-shot flatten -> one data.table
-```
-
-Each decoded retrieval block contributes only `start`, `end`, and `value`
-vectors. These chunks are flattened once after all relevant blocks are decoded.
-This avoids both per-block data.table construction and repeated resizing/copying
-of large R vectors.
-
-The benchmark memory contract is also more explicit in 0.7.2. Results now
-separate current live heap after garbage collection from the maximum heap seen
-since the benchmark reset:
-
-```{text}
-baseline_heap_mb      live R heap immediately before the timed expression
-live_heap_after_mb    live R heap after the expression and garbage collection
-peak_heap_mb          maximum R heap observed since gc(reset = TRUE)
-peak_heap_delta_mb    peak_heap_mb minus baseline_heap_mb
-live_heap_delta_mb    live_heap_after_mb minus baseline_heap_mb
-heap_delta_mb         compatibility alias of peak_heap_delta_mb
-```
-
-These remain R-heap diagnostics, not operating-system RSS measurements.
-`heap_delta_mb` is retained so benchmark-processing scripts written for 0.7.0 or
-0.7.1 continue to work.
-
-To compare 0.7.1 and 0.7.2, rerun the same benchmark configuration and inspect:
-
-```{text}
-retrieve    median_elapsed_sec / median_peak_heap_delta_mb / median_live_heap_delta_mb
-stats_full  should retain the 0.7.1 streaming performance
-stats_zoom  should not regress
-read_lazy   should not regress
-```
-
-Performance is machine-, file-, and signal-density-dependent, so bwTools does
-not enforce fixed timing thresholds in package tests. Regression tests require
-retrieved signals and exact statistics to remain identical to reference paths.
-
-A larger exact-statistics stress test can still be enabled explicitly by raising
-the safety bound:
-
-```{r}
-bench_full_large <- benchmark_bwg(
-  "/data/sample.bigwig",
-  sample_id = "sampleA",
-  region_sizes = c(1e6, 1e7),
-  n_bins = 1000L,
-  iterations = 3L,
-  warmup = 1L,
-  operations = "stats_full",
-  full_stats_max_bases = 1e7
-)
-```
-
-Keep the default bound for routine diagnostics; raise it only when intentionally
-stress-testing the exact full-resolution path.
-
-### 0.7.3 native writer profiling
-
-Version 0.7.3 freezes the 0.7.2 reader/statistics performance baseline and shifts
-benchmarking to native BigWig writing. The optional writer benchmark now profiles
-every selected region up to `write_max_bases` rather than only the largest region.
-This makes scaling across 1 Mb, 5 Mb, and 10 Mb regions directly visible.
-
-For the first real writer benchmark, use the conservative writer defaults:
+For writer profiling:
 
 ```{r}
 bench_write <- benchmark_bwg(
@@ -770,9 +524,6 @@ bench_write <- benchmark_bwg(
   sample_id = "sampleA",
   region_sizes = c(1e6, 5e6),
   operations = "write",
-  write_max_bases = 5e6,
-  write_max_intervals = 2e6,
-  write_zoom_max_intervals = 5e5,
   write_iterations = 1L,
   write_warmup = 0L,
   verbose = TRUE
@@ -781,269 +532,68 @@ bench_write <- benchmark_bwg(
 bench_write$summary
 ```
 
-For each region, two writer variants are produced:
+The benchmark reports approximate R heap behavior, not operating-system RSS.
+It does not clear the operating-system file cache.
 
-```{text}
-zoom_off   write native BigWig without zoom summaries
-zoom_on    write native BigWig with the default zoom hierarchy
-```
+## 11. API stability rules
 
-Retrieval is intentionally performed before timing. Writer rows therefore report
-metrics for the already-materialized signal being passed to `write_bwg()`:
+Starting with 0.8.0, downstream packages should rely on the documented public
+API only.
 
-```{text}
-input_signal_mb          R object size of the materialized signal table
-input_intervals          number of signal intervals
-input_covered_bases      total covered bases represented by the intervals
-input_data_blocks        expected primary BigWig data-block count
-input_payload_mb         estimated uncompressed primary type-1 data payload
-output_file_mb           final BigWig file size
-input_signal_mb_per_sec  in-memory signal throughput
-input_payload_mb_per_sec estimated primary payload throughput
-intervals_per_sec        interval-writing throughput
-output_mb_per_sec        final BigWig output throughput
-output_to_signal_ratio   output file size / in-memory signal object size
-payload_to_output_ratio  estimated primary payload / final output file size
-```
+The following are regression-tested:
 
-`input_payload_mb` estimates only the uncompressed primary type-1 BigWig data
-payload used by the current writer. It excludes the chromosome tree, R-tree,
-headers, summaries, and zoom data, so `payload_to_output_ratio` is a diagnostic
-size ratio rather than a strict compression ratio. This distinction is especially
-important for `zoom_on`, where the final file intentionally contains additional
-summary data.
+- public function names;
+- public parameter names and order;
+- `BwgTrack` schema v2 core fields and types;
+- standard accessor return columns;
+- `retrieve_bwg()` core signal columns;
+- `stats_bwg()` core statistics columns;
+- `write_bwg()` manifest columns;
+- BigWig zoom/no-zoom full-resolution round trips;
+- WIG and bedGraph compressed/uncompressed round trips;
+- package-generated `bwTools_error` conditions.
 
-Matching `zoom_off` and `zoom_on` summary rows also expose derived zoom costs on
-the `zoom_on` row:
+Functions accessed with `bwTools:::` remain internal implementation details and
+are not part of this compatibility promise.
 
-```{text}
-zoom_elapsed_overhead_sec
-zoom_elapsed_overhead_pct
-zoom_size_overhead_mb
-zoom_size_overhead_pct
-```
+## 12. Quick regression validation
 
-These values answer the two questions needed before writer optimization: how much
-time zoom construction adds, and how much larger the final BigWig becomes. If
-`zoom_off` itself is slow or memory-heavy, later optimization should target the
-primary data-block/R-tree path. If most cost appears only in `zoom_on`, optimization
-should target zoom-record construction and zoom writing instead.
-
-### 0.7.4 bounded writer benchmark execution
-
-Version 0.7.4 fixes an important benchmark-design problem discovered with a
-high-density real BigWig file. In 0.7.3, `warmup = 1` was executed inside every
-timed iteration. A configuration with two regions, two writer variants,
-`iterations = 3`, and `warmup = 1` therefore performed 24 complete BigWig
-writes rather than the intended small profiling run.
-
-The problem is particularly severe for `zoom_on`. The current pure-R zoom
-builder scans the input signal once for every selected zoom level. Dense signal
-tracks can therefore make a large zoom writer case intentionally expensive even
-when the writer is functioning correctly.
-
-Version 0.7.4 changes benchmark behavior, not BigWig semantics:
-
-```{text}
-warmup              once per normal benchmark case
-write_warmup         once per writer case; default 0
-write_iterations     timed writer repetitions; default 1
-write_max_intervals  bounds all writer cases by signal density
-write_zoom_max_intervals
-                    independently bounds the more expensive zoom_on path
-verbose              prints benchmark progress; default TRUE
-```
-
-With the defaults, a dense 5 Mb region can still profile the primary writer
-when its interval count is acceptable, while an excessively expensive zoom
-case is recorded as `skipped` instead of appearing to hang indefinitely.
-Raising these safety bounds remains possible when deliberately stress-testing
-the zoom writer.
-
-### 0.7.5 hierarchical zoom writer
-
-The bounded writer benchmark identified zoom construction, rather than the
-primary BigWig writer, as the dominant cost on dense signal tracks. Version
-0.7.5 therefore changes only the internal zoom-construction path.
-
-The previous implementation effectively followed this pattern:
-
-```{text}
-full signal -> zoom level 1
-full signal -> zoom level 2
-full signal -> zoom level 3
-...
-```
-
-Every level rescanned the complete interval table. The optimized writer uses:
-
-```{text}
-full signal
-    -> vectorized zoom level 1
-    -> aggregate level 1 into level 2
-    -> aggregate level 2 into level 3
-    -> ...
-```
-
-Each zoom record already contains the sufficient summary statistics required to
-construct the next aligned reduction level:
-
-```{text}
-valid_count
-min_value
-max_value
-sum_data
-sum_squared
-```
-
-For a parent window, `valid_count`, `sum_data`, and `sum_squared` are summed,
-while `min_value` and `max_value` are reduced across the child records. Because
-bwTools zoom levels increase by a factor of four and remain aligned to genomic
-coordinate zero, this aggregation preserves the same covered-base summaries as
-direct construction from the original signal.
-
-The first zoom level still has to inspect full-resolution intervals. Its common
-case is now vectorized: intervals contained within one zoom window are grouped
-in bulk, while only intervals that actually cross a zoom boundary are split.
-During writing, only the preceding and current zoom levels need to be retained.
-
-No user-facing writer call changes:
+The bundled files can be used for a short installation check:
 
 ```{r}
-written <- write_bwg(
+stopifnot(
+  identical(detect_bwg_format(bw_file), "bigwig"),
+  identical(detect_bwg_format(bedgraph_file), "bedgraph")
+)
+
+x <- read_bwg(
+  bw_file,
+  sample_ids = "example"
+)
+
+stopifnot(
+  is_bwg_track(x),
+  identical(summary_bwg(x)$mode, "lazy"),
+  nrow(samples_bwg(x)) == 1L,
+  nrow(seqinfo_bwg(x)) > 0L
+)
+
+retrieved <- retrieve_bwg(
   x,
-  outdir = "output",
-  format = "bigwig",
-  zoom = TRUE,
-  overwrite = TRUE
+  chrom = "chr1",
+  start = 450L,
+  end = 1600L
+)
+
+stopifnot(
+  nrow(retrieved) > 0L,
+  all(retrieved$chrom == "chr1"),
+  all(retrieved$start >= 450L),
+  all(retrieved$end <= 1600L)
 )
 ```
 
-For the first performance check after installing 0.7.5, keep the conservative
-writer guard and benchmark the 1 Mb case:
-
-```{r}
-bench_zoom <- benchmark_bwg(
-  "/data/sample.bigwig",
-  sample_id = "sampleA",
-  region_sizes = 1e6,
-  operations = "write",
-  write_iterations = 1L,
-  write_warmup = 0L,
-  verbose = TRUE
-)
-
-bench_zoom$summary
-```
-
-If the 1 Mb `zoom_on` case finishes comfortably, the existing safety guard can
-be raised explicitly for a larger stress test rather than changing the package
-default prematurely:
-
-```{r}
-bench_zoom_large <- benchmark_bwg(
-  "/data/sample.bigwig",
-  sample_id = "sampleA",
-  region_sizes = 5e6,
-  operations = "write",
-  write_max_bases = 5e6,
-  write_max_intervals = 2e6,
-  write_zoom_max_intervals = 2e6,
-  write_iterations = 1L,
-  write_warmup = 0L,
-  verbose = TRUE
-)
-```
-
-### Benchmark result contract
-
-The returned object contains:
-
-```{text}
-bwToolsBenchmark
-├── system   R, platform, OS, bwTools, and data.table versions
-├── file     source file size and genome dimensions
-├── config   benchmark settings and measurement notes
-├── regions  actual benchmark regions
-├── results  one row per timed iteration
-└── summary  median/min/max summaries by operation and region
-```
-
-Important `results` metrics include:
-
-```{text}
-elapsed_sec       wall-clock elapsed time
-user_sec          R user CPU time
-system_sec        R system CPU time
-baseline_heap_mb      live R heap immediately before the timed expression
-live_heap_after_mb    live R heap after the expression and garbage collection
-peak_heap_mb          approximate maximum R heap since the benchmark reset
-peak_heap_delta_mb    approximate peak heap increase above baseline
-live_heap_delta_mb    retained live heap change relative to baseline
-heap_delta_mb         compatibility alias of peak_heap_delta_mb
-result_mb         returned R object size
-result_rows       returned interval/bin count
-mbases_per_sec    genomic-region throughput
-file_mb_per_sec   full-memory file-read throughput
-output_mb_per_sec native write-output throughput
-input_signal_mb   materialized writer input object size
-input_intervals   writer input interval count
-input_payload_mb  estimated uncompressed primary type-1 payload
-input_data_blocks expected primary BigWig data-block count
-input_signal_mb_per_sec  writer throughput by R input-object size
-input_payload_mb_per_sec writer throughput by estimated primary payload
-intervals_per_sec        writer interval throughput
-output_to_signal_ratio   final file / in-memory signal size ratio
-payload_to_output_ratio  estimated primary payload / final file size ratio
-stat_source       actual statistics source: zoom or full
-resolution        actual zoom reduction level when used
-status            ok / error / skipped
-message           captured diagnostic message
-```
-
-The heap metrics are derived from `gc()` and are **not** operating-system RSS.
-`live_heap_after_mb` is measured after garbage collection while the benchmark
-result remains referenced; `peak_heap_mb` is the maximum R heap observed since
-`gc(reset = TRUE)`. Likewise, `metadata_cache_cold` clears only the bwTools
-metadata cache; it does not flush the operating-system file cache. These limitations are recorded
-in `bench$config` so benchmark reports are not over-interpreted.
-
-To save benchmark tables, use normal table-writing tools explicitly:
-
-```{r}
-data.table::fwrite(
-  bench$results,
-  "bwtools_benchmark.results.tsv",
-  sep = "\t"
-)
-
-data.table::fwrite(
-  bench$summary,
-  "bwtools_benchmark.summary.tsv",
-  sep = "\t"
-)
-```
-
-## Return-value contract
-
-| Function | Return |
-| --- | --- |
-| `read_bwg()` | `BwgTrack` |
-| `bwg_track()` | `BwgTrack` |
-| `validate_bwg()` | input object invisibly |
-| `samples_bwg()` | data.table |
-| `seqinfo_bwg()` | data.table |
-| `metadata_bwg()` | list |
-| `retrieve_bwg(..., result = "data")` | data.table |
-| `retrieve_bwg(..., result = "track")` | `BwgTrack` |
-| `merge_bwg()` | `BwgTrack` |
-| `stats_bwg()` | data.table |
-| `zoominfo_bwg()` | data.table |
-| `summary_bwg()` | one-row data.table |
-| `write_bwg()` | invisible manifest data.table |
-| `benchmark_bwg()` | `bwToolsBenchmark` |
-
-## Package regression tests
+Then run the full package test suite:
 
 ```{r}
 devtools::document()
@@ -1051,30 +601,18 @@ devtools::test()
 devtools::check()
 ```
 
-Expected development target:
-
-```{text}
-FAIL 0
-WARN 0
-SKIP 0
-```
-
 ## Development status
 
-- **0.1.x**: native reader and initial BwgTrack contract — implemented.
-- **0.2.x**: native BigWig/WIG/bedGraph writer — implemented.
-- **0.3.x**: BigWig zoom levels and interval statistics — implemented.
-- **0.4.x**: unified indexed genomic retrieval — implemented.
-- **0.5.x**: automatic merge and explicit signal aggregation — implemented.
-- **0.6.1**: standardized public API and BwgTrack schema v2.
-- **0.6.2**: hardened BigWig detection and path-encoding safety.
-- **0.6.3**: fixed automatic BigWig dispatch after format detection.
-- **0.7.0**: reproducible large-BigWig benchmark suite.
-- **0.7.1**: block-streamed exact statistics and first reader optimization.
-- **0.7.2**: indexed retrieval refinement and live/peak heap diagnostics.
-- **0.7.3**: multi-region native BigWig writer profiling and zoom-overhead metrics.
-- **0.7.4**: bounded writer benchmarking, interval-density guards, and progress diagnostics.
-- **0.7.5**: vectorized first-level and hierarchical higher-level BigWig zoom construction — current stage.
-- **0.8.x**: statistics and zoom refinements where justified by benchmarks.
-- **0.9.x**: API freeze, cross-platform checks, and release hardening.
-- **1.0.0**: stable public release.
+- **0.1.x** — native reader and initial `BwgTrack` contract.
+- **0.2.x** — native BigWig/WIG/bedGraph writer.
+- **0.3.x** — BigWig zoom levels and interval statistics.
+- **0.4.x** — standardized indexed genomic retrieval.
+- **0.5.x** — automatic merge and explicit arithmetic aggregation.
+- **0.6.x** — public API and `BwgTrack` schema standardization.
+- **0.7.x** — large-file benchmark and reader/writer performance optimization.
+- **0.8.x** — API stability, validation, cross-format consistency, and release hardening.
+- **0.9.x** — release-candidate checks and API freeze.
+- **1.0.0** — stable cross-platform release.
+
+See `inst/API_CONTRACT.md` and `DEVELOPMENT.md` for the formal downstream
+integration contract and development acceptance criteria.

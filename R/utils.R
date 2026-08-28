@@ -1,12 +1,22 @@
 # Author: Rensc
-# Date: 2026-08-27
-# Version: dev002
-# Function: Provide common validation and path utilities
+# Date: 2026-08-29
+# Version: dev003
+# Function: Provide common validation, error, and path utilities
 # Input: User arguments
-# Output: Validated values
+# Output: Validated values and standardized bwTools conditions
 
-bw_stop <- function(message) {
-  stop(message, call. = FALSE)
+bw_error <- function(message, subclass = NULL) {
+  message <- paste(as.character(message), collapse = "\n")
+  classes <- c(subclass, "bwTools_error", "error", "condition")
+  classes <- unique(classes[!is.na(classes) & nzchar(classes)])
+  structure(
+    list(message = message, call = NULL),
+    class = classes
+  )
+}
+
+bw_stop <- function(message, subclass = NULL) {
+  stop(bw_error(message, subclass = subclass))
 }
 
 bw_validate_local_file <- function(file) {

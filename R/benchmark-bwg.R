@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-29
-# Version: dev004
+# Version: dev005
 # Function: Run structured large BigWig performance benchmarks
 # Input: One local BigWig file and benchmark configuration
 # Output: bwToolsBenchmark object with raw and summarized metrics
@@ -80,7 +80,11 @@ benchmark_bwg <- function(
   if (length(sample_id) != 1L || is.na(sample_id) || !nzchar(sample_id)) {
     bw_stop("`sample_id` must be a single non-empty value.")
   }
-  stat <- match.arg(stat)
+  stat <- bw_match_arg(
+    stat,
+    c("mean", "stdev", "max", "min", "coverage", "sum"),
+    "stat"
+  )
   n_bins <- bw_benchmark_positive_integer(n_bins, "n_bins")
   iterations <- bw_benchmark_positive_integer(iterations, "iterations")
   warmup <- bw_benchmark_positive_integer(warmup, "warmup", allow_zero = TRUE)
@@ -109,9 +113,7 @@ benchmark_bwg <- function(
     "write_warmup",
     allow_zero = TRUE
   )
-  if (!is.logical(verbose) || length(verbose) != 1L || is.na(verbose)) {
-    bw_stop("`verbose` must be TRUE or FALSE.")
-  }
+  verbose <- bw_validate_flag(verbose, "verbose")
 
   operations <- unique(as.character(operations))
   if (length(operations) < 1L || anyNA(operations) || any(!nzchar(operations))) {

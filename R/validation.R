@@ -1,9 +1,77 @@
 # Author: Rensc
 # Date: 2026-08-28
-# Version: dev001
+# Version: dev002
 # Function: Standardize validation and sample selection for public bwTools APIs
 # Input: BwgTrack-compatible objects and sample identifiers
 # Output: Validated objects, sample tables, or standardized errors
+
+bw_validate_flag <- function(x, name) {
+  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
+    bw_stop(paste0("`", name, "` must be TRUE or FALSE."))
+  }
+  x
+}
+
+bw_match_arg <- function(x, choices, name) {
+  choices <- as.character(choices)
+  values <- as.character(x)
+  if (length(values) > 1L && identical(values, choices)) {
+    return(choices[[1L]])
+  }
+  if (length(values) != 1L || is.na(values) || !values %in% choices) {
+    bw_stop(paste0(
+      "`", name, "` must be one of: ",
+      paste(choices, collapse = ", "),
+      "."
+    ))
+  }
+  values[[1L]]
+}
+
+bw_validate_scalar_character <- function(
+  x,
+  name,
+  allow_null = FALSE,
+  choices = NULL
+) {
+  if (is.null(x)) {
+    if (isTRUE(allow_null)) return(NULL)
+    bw_stop(paste0("`", name, "` must be a single non-empty character value."))
+  }
+  if (!is.character(x) || length(x) != 1L || is.na(x) || !nzchar(x)) {
+    bw_stop(paste0("`", name, "` must be a single non-empty character value."))
+  }
+  if (!is.null(choices) && !x %in% choices) {
+    bw_stop(paste0(
+      "`", name, "` must be one of: ",
+      paste(choices, collapse = ", "),
+      "."
+    ))
+  }
+  x
+}
+
+bw_validate_positive_integer <- function(x, name, minimum = 1L) {
+  if (length(x) != 1L || is.na(x)) {
+    bw_stop(paste0("`", name, "` must be a single integer >= ", minimum, "."))
+  }
+  value <- suppressWarnings(as.numeric(x))
+  if (!is.finite(value) || value != floor(value) || value < minimum ||
+      value > .Machine$integer.max) {
+    bw_stop(paste0("`", name, "` must be a single integer >= ", minimum, "."))
+  }
+  as.integer(value)
+}
+
+bw_validate_genomic_interval <- function(chrom, start, end) {
+  chrom <- bw_validate_scalar_character(as.character(chrom), "chrom")
+  start_value <- bw_validate_positive_integer(start, "start", minimum = 1L)
+  end_value <- bw_validate_positive_integer(end, "end", minimum = 1L)
+  if (end_value < start_value) {
+    bw_stop("`end` must be greater than or equal to `start`.")
+  }
+  list(chrom = chrom, start = start_value, end = end_value)
+}
 
 bw_validate_sample_ids <- function(sample_ids, available = NULL, allow_null = TRUE) {
   if (is.null(sample_ids)) {

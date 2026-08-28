@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-28
-# Version: dev003
+# Version: dev004
 # Function: Intelligently merge or aggregate BwgTrack-compatible signal objects
 # Input: Two or more BwgTrack-compatible objects
 # Output: A memory-mode BwgTrack containing merged or aggregated signal
@@ -733,9 +733,11 @@ merge_bwg <- function(
   drop_zero = TRUE,
   merge_adjacent = TRUE
 ) {
-  method <- match.arg(method)
-  missing <- match.arg(missing)
-  strand <- match.arg(strand)
+  method <- bw_match_arg(method, c("auto", "mean", "sum"), "method")
+  missing <- bw_match_arg(missing, c("ignore", "zero"), "missing")
+  strand <- bw_match_arg(strand, c("separate", "ignore"), "strand")
+  drop_zero <- bw_validate_flag(drop_zero, "drop_zero")
+  merge_adjacent <- bw_validate_flag(merge_adjacent, "merge_adjacent")
   inputs <- bw_collect_bwg_tracks(..., tracks = tracks)
 
   if (identical(method, "auto")) {

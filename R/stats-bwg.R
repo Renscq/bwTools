@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-29
-# Version: dev004
+# Version: dev005
 # Function: Calculate exact or zoom-accelerated BigWig interval statistics
 # Input: Validated BwgTrack object and genomic bins
 # Output: Per-bin signal statistics in 1-based closed coordinates
@@ -408,20 +408,17 @@ stats_bwg <- function(
   use_zoom = TRUE
 ) {
   bw_assert_bwg(x)
-  stat <- match.arg(stat)
-  if (!is.logical(use_zoom) || length(use_zoom) != 1L || is.na(use_zoom)) {
-    bw_stop("`use_zoom` must be TRUE or FALSE.")
-  }
-  chrom <- as.character(chrom)
-  if (length(chrom) != 1L || is.na(chrom) || !nzchar(chrom)) {
-    bw_stop("`chrom` must be a single non-empty chromosome name.")
-  }
-  start <- suppressWarnings(as.integer(start))
-  end <- suppressWarnings(as.integer(end))
-  n_bins <- suppressWarnings(as.integer(n_bins))
-  if (length(start) != 1L || length(end) != 1L || length(n_bins) != 1L) {
-    bw_stop("`start`, `end`, and `n_bins` must be scalar values.")
-  }
+  stat <- bw_match_arg(
+    stat,
+    c("mean", "stdev", "max", "min", "coverage", "sum"),
+    "stat"
+  )
+  use_zoom <- bw_validate_flag(use_zoom, "use_zoom")
+  interval <- bw_validate_genomic_interval(chrom, start, end)
+  chrom <- interval$chrom
+  start <- interval$start
+  end <- interval$end
+  n_bins <- bw_validate_positive_integer(n_bins, "n_bins", minimum = 1L)
   bw_stat_bins(start, end, n_bins)
 
   sample_tbl <- bw_select_samples(x, sample_ids = sample_ids)

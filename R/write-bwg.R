@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-27
-# Version: dev004
+# Version: dev005
 # Function: Write standardized BwgTrack objects to BigWig, WIG, or bedGraph files
 # Input: BwgTrack-compatible object, output format, and chromosome sizes
 # Output: One signal file per selected sample
@@ -253,9 +253,18 @@ write_bwg <- function(
   max_zoom_levels = 10L
 ) {
   bw_assert_bwg(x)
-  format <- match.arg(format)
-  if (!is.character(outdir) || length(outdir) != 1L || is.na(outdir) || !nzchar(outdir)) {
-    bw_stop("`outdir` must be a single non-empty path.")
+  format <- bw_match_arg(format, c("bigwig", "wig", "bedgraph"), "format")
+  outdir <- bw_validate_scalar_character(outdir, "outdir")
+  overwrite <- bw_validate_flag(overwrite, "overwrite")
+  compress <- bw_validate_flag(compress, "compress")
+  zoom <- bw_validate_flag(zoom, "zoom")
+  max_zoom_levels <- bw_validate_positive_integer(
+    max_zoom_levels,
+    "max_zoom_levels",
+    minimum = 0L
+  )
+  if (max_zoom_levels > 65535L) {
+    bw_stop("`max_zoom_levels` must be between 0 and 65535.")
   }
   dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
   outdir <- normalizePath(outdir, winslash = "/", mustWork = TRUE)

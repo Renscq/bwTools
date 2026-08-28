@@ -417,7 +417,7 @@ Acceptance criteria:
 
 ## 0.7.5 - Hierarchical native zoom-writer optimization
 
-Status: **implemented; real-file writer benchmark rerun required.**
+Status: **implemented and validated on dense real-file 1 Mb and 5 Mb writer benchmarks.**
 
 Measured 0.7.4 outcome:
 
@@ -457,12 +457,49 @@ Acceptance criteria:
   time, peak/live heap, output size, and zoom overhead against the 0.7.4
   baseline before increasing default zoom benchmark density limits.
 
-## 0.8.x - Statistics and zoom refinements
+## 0.8.0 - Public API stability and cross-format hardening
 
-Planned:
+Status: **implemented; local R package regression testing required.**
 
-- Refine statistics or zoom behavior only where real workflows justify it.
-- Preserve exact/full-resolution and approximate/zoom semantics explicitly.
+Scope:
+
+- Keep the optimized 0.7.5 BigWig reader, indexed retrieval, streamed exact
+  statistics, and hierarchical zoom writer unchanged.
+- Treat the 15 exported function signatures as the downstream integration
+  boundary and regression-test their parameter names and order.
+- Standardize package-generated user errors under the `bwTools_error` condition
+  class so downstream packages can catch bwTools failures without matching full
+  message text.
+- Centralize common scalar, flag, positive-integer, choice, and genomic-interval
+  validation helpers.
+- Reject fractional statistics coordinates rather than silently truncating them.
+- Verify full-resolution signal equivalence across BigWig zoom/no-zoom, WIG,
+  WIG.gz, bedGraph, and bedGraph.gz round trips.
+- Keep BwgTrack schema v2 unchanged.
+- Reorganize README documentation around the normal read -> retrieve ->
+  merge/stats -> write workflow, with benchmarking clearly separated as an
+  advanced diagnostic feature.
+
+Acceptance criteria:
+
+- All exported function names and formals match the 0.8.0 API contract.
+- BwgTrack schema v2 core fields and data types remain unchanged.
+- Package-generated input-validation errors inherit from `bwTools_error`.
+- Cross-format round trips preserve standardized coordinates, values, and sample
+  identity within floating-point tolerance.
+- BigWig zoom/no-zoom output preserves identical full-resolution signal while
+  differing only in zoom metadata as requested.
+- Writer manifests retain `sample_id`, `file`, and `format` core columns.
+- No new runtime dependency, compiled code, or external executable is added.
+
+## 0.8.x - Stability follow-ups
+
+Planned only when testing identifies a concrete need:
+
+- Additional malformed-file or extreme-coordinate regression coverage.
+- Further error subclasses if downstream integration requires finer-grained
+  condition handling.
+- Documentation refinements that do not change the public API contract.
 
 ## 0.9.x - Release hardening
 

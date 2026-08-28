@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-29
-# Version: dev005
+# Version: dev006
 # Function: Retrieve one or more genomic regions from BwgTrack-compatible objects
 # Input: BwgTrack and genomic region(s)
 # Output: In-memory signal data.table or BwgTrack subset
@@ -271,7 +271,7 @@ retrieve_bwg <- function(
   result = c("data", "track")
 ) {
   bw_assert_bwg(x)
-  result <- match.arg(result)
+  result <- bw_match_arg(result, c("data", "track"), "result")
   normalized_regions <- bw_normalize_retrieve_regions(
     chrom = chrom,
     start = start,
