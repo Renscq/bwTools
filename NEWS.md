@@ -1,9 +1,24 @@
+# bwTools 0.6.3
+
+## BigWig dispatch fix
+
+- Fixed a regression introduced during the 0.6.1 API standardization where
+  `vapply()` attached file-path names to automatically detected format labels.
+- Fixed `read_bwg()` dispatch because `identical(fmt, "bigwig")` returns
+  `FALSE` for a named scalar even when its value is `"bigwig"`.
+- Prevented valid BigWig inputs from falling through to the WIG text reader,
+  which caused `trimws()` to report `input string 1 is invalid UTF-8`.
+- Automatic format detection now explicitly returns an unnamed format vector,
+  and per-file dispatch uses scalar extraction without retaining attributes.
+- Added regression coverage for automatic BigWig dispatch with explicit sample
+  IDs.
+
 # bwTools 0.6.2
 
 ## Binary-safe format detection
 
-- Fixed `read_bwg()` failures where a BigWig file could fall through to the
-  text-format probe and trigger an invalid UTF-8 error in `trimws()`.
+- Hardened format detection so binary BigWig content is checked before the
+  text-format probe, reducing invalid UTF-8 failures during format detection.
 - Changed `detect_bwg_format()` to inspect the BigWig four-byte magic signature
   before any filename or text decoding.
 - Added a binary guard so unrecognized binary inputs fail with a format error

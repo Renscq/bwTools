@@ -1,6 +1,6 @@
 # bwTools public API contract
 
-Version: **schema 2 / bwTools 0.6.2**
+Version: **schema 2 / bwTools 0.6.3**
 
 Downstream packages should treat the following as the stable integration
 boundary:

@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-28
-# Version: dev004
+# Version: dev005
 # Function: Read BigWig, WIG, and bedGraph files into standardized BwgTrack objects
 # Input: One or more local genomic signal files
 # Output: Validated BwgTrack object
@@ -53,7 +53,7 @@ read_bwg <- function(
   }
 
   formats <- if (identical(format, "auto")) {
-    vapply(files, detect_bwg_format, character(1L))
+    vapply(files, detect_bwg_format, character(1L), USE.NAMES = FALSE)
   } else {
     rep(format, n)
   }
@@ -77,7 +77,7 @@ read_bwg <- function(
   data_list <- if (identical(mode, "memory")) vector("list", n) else NULL
 
   for (i in seq_len(n)) {
-    fmt <- formats[i]
+    fmt <- formats[[i]]
     x <- NULL
     if (identical(fmt, "bigwig")) {
       seqinfo <- bw_bigwig_seqinfo(files[i])

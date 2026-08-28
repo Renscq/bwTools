@@ -244,3 +244,14 @@ Planned:
 
 Release only after reader, writer, retrieval, merge, statistics, zoom, object
 contract, large-file behavior, and cross-platform installation are validated.
+
+## 0.6.3 - Automatic format dispatch regression fix
+
+Status: implemented; local R regression testing required.
+
+- Keep the 0.6.1 public API and BwgTrack schema v2 unchanged.
+- Remove names from the vector returned by automatic per-file format detection.
+- Extract each detected format as an attribute-free scalar before dispatch.
+- Add a regression test that exercises `read_bwg()` with automatic BigWig
+  detection and explicit `sample_ids`.
+
