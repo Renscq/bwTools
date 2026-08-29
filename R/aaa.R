@@ -1,6 +1,6 @@
 # Author: Rensc
-# Date: 2026-08-28
-# Version: dev007
+# Date: 2026-08-29
+# Version: dev008
 # Function: Define package constants and internal caches
 # Input: None
 # Output: Internal constants and environments
@@ -22,6 +22,24 @@
 .BWT_FLOAT32_MAX <- 3.402823466e38
 
 .bwtools_cache <- new.env(parent = emptyenv())
+
+# Register data.table non-standard evaluation symbols for R CMD check.
+utils::globalVariables(c(
+  ".",
+  ".member_id",
+  ".source_id",
+  ".strand_group",
+  "delta_count",
+  "delta_sum",
+  "max_value",
+  "min_value",
+  "sample_id",
+  "start0",
+  "sum_data",
+  "sum_squared",
+  "tid",
+  "valid_count"
+))
 
 # Tell data.table that bwTools intentionally uses data.table query semantics.
 .datatable.aware <- TRUE

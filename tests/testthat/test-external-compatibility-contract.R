@@ -1,41 +1,44 @@
 test_that("external compatibility assets ship without runtime dependencies", {
-  root <- normalizePath(
-    testthat::test_path("..", ".."),
-    winslash = "/",
-    mustWork = TRUE
+  compat_dir <- system.file("compatibility", package = "bwTools")
+  runner <- system.file(
+    "compatibility",
+    "run-compatibility.001.R",
+    package = "bwTools"
   )
-  compat_dir <- file.path(root, "inst", "compatibility")
-  runner <- file.path(compat_dir, "run-compatibility.001.R")
-  py_bridge <- file.path(compat_dir, "pybigwig-bridge.001.py")
-  readme <- file.path(compat_dir, "README.md")
-  contract <- file.path(root, "inst", "COMPATIBILITY.md")
+  py_bridge <- system.file(
+    "compatibility",
+    "pybigwig-bridge.001.py",
+    package = "bwTools"
+  )
+  readme <- system.file("compatibility", "README.md", package = "bwTools")
+  contract <- system.file("COMPATIBILITY.md", package = "bwTools")
 
-  expect_true(dir.exists(compat_dir))
-  expect_true(file.exists(runner))
-  expect_true(file.exists(py_bridge))
-  expect_true(file.exists(readme))
-  expect_true(file.exists(contract))
+  expect_true(nzchar(compat_dir) && dir.exists(compat_dir))
+  expect_true(nzchar(runner) && file.exists(runner))
+  expect_true(nzchar(py_bridge) && file.exists(py_bridge))
+  expect_true(nzchar(readme) && file.exists(readme))
+  expect_true(nzchar(contract) && file.exists(contract))
 
-  description <- read.dcf(file.path(root, "DESCRIPTION"))
+  description <- utils::packageDescription("bwTools")
   runtime <- paste(
-    description[1L, intersect(c("Depends", "Imports"), colnames(description))],
+    unlist(description[c("Depends", "Imports")], use.names = FALSE),
     collapse = " "
   )
   expect_false(grepl("pyBigWig|rtracklayer|GenomicRanges|IRanges|GenomeInfoDb", runtime))
 })
 
 test_that("compatibility runner defines bidirectional reference checks", {
-  root <- normalizePath(
-    testthat::test_path("..", ".."),
-    winslash = "/",
-    mustWork = TRUE
+  runner <- system.file(
+    "compatibility",
+    "run-compatibility.001.R",
+    package = "bwTools"
   )
-  runner <- readLines(
-    file.path(root, "inst", "compatibility", "run-compatibility.001.R"),
-    warn = FALSE,
-    encoding = "UTF-8"
+  expect_true(nzchar(runner) && file.exists(runner))
+
+  runner_text <- paste(
+    readLines(runner, warn = FALSE, encoding = "UTF-8"),
+    collapse = "\n"
   )
-  runner_text <- paste(runner, collapse = "\n")
 
   expect_match(runner_text, '"pyBigWig"')
   expect_match(runner_text, '"rtracklayer"')
@@ -48,17 +51,17 @@ test_that("compatibility runner defines bidirectional reference checks", {
 })
 
 test_that("compatibility validation uses installed canonical fixtures", {
-  root <- normalizePath(
-    testthat::test_path("..", ".."),
-    winslash = "/",
-    mustWork = TRUE
+  runner <- system.file(
+    "compatibility",
+    "run-compatibility.001.R",
+    package = "bwTools"
   )
-  runner <- readLines(
-    file.path(root, "inst", "compatibility", "run-compatibility.001.R"),
-    warn = FALSE,
-    encoding = "UTF-8"
+  expect_true(nzchar(runner) && file.exists(runner))
+
+  runner_text <- paste(
+    readLines(runner, warn = FALSE, encoding = "UTF-8"),
+    collapse = "\n"
   )
-  runner_text <- paste(runner, collapse = "\n")
 
   expect_match(runner_text, "bwtools_example\\.bedGraph")
   expect_match(runner_text, "bwtools_example\\.chrom\\.sizes")

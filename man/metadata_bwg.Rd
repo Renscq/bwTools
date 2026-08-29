@@ -15,18 +15,3 @@ The standardized metadata list.
 \description{
 Return BwgTrack metadata
 }
-\details{
-Standard metadata include \code{coordinate}, \code{schema_version}, \code{backend}, and
-\code{mode}. Treat returned metadata as descriptive object state rather than a
-mechanism for mutating the track contract.
-}
-\examples{
-x <- bwg_track(samples = data.frame(sample_id = "sampleA"), data = data.frame(
-  sample_id = "sampleA", chrom = "chr1", start = 1L, end = 2L,
-  value = 1, strand = "*"
-))
-metadata_bwg(x)
-}
-\seealso{
-\code{\link[=samples_bwg]{samples_bwg()}}, \code{\link[=seqinfo_bwg]{seqinfo_bwg()}}
-}

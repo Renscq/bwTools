@@ -8,13 +8,8 @@
 }
 \arguments{
 \item{x}{A \code{bwToolsTrack} object.}
-
 \item{...}{Additional arguments reserved for future use.}
 }
-\value{
-\code{x}, invisibly.
-}
-\description{
-Print a bwTools signal track
-}
+\value{\code{x}, invisibly.}
+\description{Print a bwTools signal track}
 \keyword{internal}

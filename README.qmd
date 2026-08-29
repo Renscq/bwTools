@@ -11,7 +11,7 @@ execute:
 [![R-CMD-check](https://github.com/Renscq/bwTools/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/Renscq/bwTools/actions/workflows/R-CMD-check.yaml)
 [![pkgdown](https://github.com/Renscq/bwTools/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/Renscq/bwTools/actions/workflows/pkgdown.yaml)
 
-Current release: **0.8.8**
+Current release: **0.8.9**
 
 `bwTools` provides native-R tools for BigWig, WIG, and bedGraph genomic signal
 tracks. It supports BigWig binary reading and writing, indexed regional

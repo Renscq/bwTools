@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-29
-# Version: dev004
+# Version: dev005
 # Function: Provide internal helpers for large BigWig benchmarking
 # Input: Benchmark configuration and measured R expressions
 # Output: Normalized regions, timing metrics, and benchmark summaries
@@ -213,7 +213,7 @@ bw_benchmark_write_input_metrics <- function(x) {
   )
 
   list(
-    input_signal_mb = as.numeric(object.size(signal)) / 1024^2,
+    input_signal_mb = as.numeric(utils::object.size(signal)) / 1024^2,
     input_intervals = as.integer(intervals),
     input_payload_mb = as.numeric(payload_bytes) / 1024^2,
     input_covered_bases = as.numeric(covered_bases),
@@ -282,7 +282,7 @@ bw_benchmark_measure <- function(fun, warmup = 0L) {
     peak_heap_delta_mb = peak_heap_delta_mb,
     live_heap_delta_mb = live_heap_delta_mb,
     heap_delta_mb = peak_heap_delta_mb,
-    result_mb = if (is.null(value)) NA_real_ else as.numeric(object.size(value)) / 1024^2,
+    result_mb = if (is.null(value)) NA_real_ else as.numeric(utils::object.size(value)) / 1024^2,
     result_rows = if (is.null(value)) NA_integer_ else bw_benchmark_result_rows(value)
   )
 }

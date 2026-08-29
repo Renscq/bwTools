@@ -1,3 +1,19 @@
+# bwTools 0.8.9
+
+## R CMD check portability fixes
+
+- Reworked package tests to validate installed package assets through
+  `system.file()` and `packageDescription()` instead of assuming the test
+  working directory is the source-package root.
+- Moved source-tree-only README, roxygen, pkgdown, and generated-Rd contracts
+  into `tools/check-repository.003.R`, which runs before GitHub CI jobs.
+- Kept installed compatibility checks pointed at `compatibility/` and
+  `COMPATIBILITY.md`, matching how `inst/` assets are installed by R.
+- Qualified `utils::object.size()` in benchmark helpers and registered the
+  data.table non-standard-evaluation symbols reported by `R CMD check`.
+- Preserved the 15-function public API, BwgTrack schema v2, binary I/O
+  algorithms, and all numerical results.
+
 # bwTools 0.8.8
 
 ## pkgdown reference-index fix
