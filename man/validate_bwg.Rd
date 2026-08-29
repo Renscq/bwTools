@@ -17,3 +17,21 @@ Performs a strict validation of the public bwTools \code{BwgTrack} contract.
 Valid objects contain standardized \code{samples}, \code{data}, \code{seqinfo}, and \code{meta}
 slots and use 1-based closed in-memory coordinates.
 }
+\details{
+Validation checks standardized slot schemas, coordinate types, sample and
+chromosome consistency, known chromosome bounds, and required metadata.
+Package-generated validation failures inherit from \code{bwTools_error}.
+}
+\examples{
+x <- bwg_track(
+  samples = data.frame(sample_id = "sampleA"),
+  data = data.frame(
+    sample_id = "sampleA", chrom = "chr1",
+    start = 1L, end = 10L, value = 1, strand = "*"
+  )
+)
+validate_bwg(x)
+}
+\seealso{
+\code{\link[=bwg_track]{bwg_track()}}, \code{\link[=is_bwg_track]{is_bwg_track()}}
+}

@@ -1,0 +1,116 @@
+---
+title: "Merging and multi-sample workflows"
+description: "Work with multiple samples and strands and choose conservative or arithmetic merge semantics."
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Merging and multi-sample workflows}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval = FALSE, collapse = TRUE, comment = "#>")
+```
+
+# Multi-sample input
+
+`read_bwg()` preserves sample identity, source format, and file-level strand
+metadata.
+
+```{r}
+library(bwTools)
+
+bw_file <- system.file("extdata", "bwtools_example.bigwig", package = "bwTools")
+bg_file <- system.file("extdata", "bwtools_example.bedGraph", package = "bwTools")
+
+x <- read_bwg(
+  c(bw_file, bg_file),
+  sample_ids = c("sampleA", "sampleB"),
+  strand = c("+", "-")
+)
+
+samples_bwg(x)
+seqinfo_bwg(x)
+```
+
+BigWig-only multi-file input stays lazy. Mixed BigWig/WIG/bedGraph input uses
+memory mode.
+
+# Conservative automatic merge
+
+`merge_bwg(..., method = "auto")` is lossless and non-arithmetic:
+
+```{r}
+a <- retrieve_bwg(x, "chr1", 1L, 1000L, sample_ids = "sampleA", result = "track")
+b <- retrieve_bwg(x, "chr1", 2000L, 3000L, sample_ids = "sampleA", result = "track")
+
+combined <- merge_bwg(a, b)
+```
+
+Different sample IDs remain separate. Disjoint signal for the same sample is
+appended. Exact duplicates and equal-valued overlaps are normalized. Conflicting
+same-sample overlaps raise `bwTools_error` rather than silently choosing an
+arithmetic rule.
+
+# Mean and sum aggregation
+
+Use arithmetic methods explicitly:
+
+```{r}
+mean_track <- merge_bwg(
+  x,
+  method = "mean",
+  missing = "ignore"
+)
+
+sum_track <- merge_bwg(
+  x,
+  method = "sum"
+)
+```
+
+For means, `missing = "ignore"` averages only samples covering an atomic segment;
+`missing = "zero"` treats uncovered members as zero.
+
+# Grouped aggregation
+
+```{r}
+groups <- data.frame(
+  sample_id = c("rep1", "rep2", "rep3", "rep4"),
+  group_id = c("control", "control", "treated", "treated")
+)
+
+# merge_bwg(track, method = "mean", groups = groups)
+```
+
+`groups` is used only with `method = "mean"` or `method = "sum"`.
+
+# Mixed strands after merging
+
+A memory-mode sample can legitimately contain both `+` and `-` signal rows.
+Its sample-level metadata becomes `strand = "*"`, but retrieval remains exact
+because row-level signal strand is used:
+
+```{r}
+plus_track <- bwg_track(
+  samples = data.frame(sample_id = "sampleA", strand = "+"),
+  data = data.frame(
+    sample_id = "sampleA", chrom = "chr1",
+    start = 1L, end = 10L, value = 1, strand = "+"
+  )
+)
+minus_track <- bwg_track(
+  samples = data.frame(sample_id = "sampleA", strand = "-"),
+  data = data.frame(
+    sample_id = "sampleA", chrom = "chr1",
+    start = 20L, end = 30L, value = 1, strand = "-"
+  )
+)
+mixed_strand <- merge_bwg(plus_track, minus_track)
+
+plus <- retrieve_bwg(mixed_strand, "chr1", 1L, 50L, strand = "+")
+minus <- retrieve_bwg(mixed_strand, "chr1", 1L, 50L, strand = "-")
+```
+
+Use `strand = "ignore"` in `merge_bwg()` only when combining strands is an
+explicit analytical decision.

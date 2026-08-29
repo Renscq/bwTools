@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-29
-# Version: dev003
+# Version: dev004
 # Function: Standardize validation, sample selection, and genomic query bounds
 # Input: BwgTrack-compatible objects, sample identifiers, and genomic intervals
 # Output: Validated objects, bounded queries, sample tables, or standardized errors
@@ -594,6 +594,21 @@ bw_assert_bwg <- function(x) {
 #'
 #' @param x A `BwgTrack` object.
 #' @return `x`, invisibly. An error is raised when the contract is invalid.
+#' @details
+#' Validation checks standardized slot schemas, coordinate types, sample and
+#' chromosome consistency, known chromosome bounds, and required metadata.
+#' Package-generated validation failures inherit from `bwTools_error`.
+#'
+#' @examples
+#' x <- bwg_track(
+#'   samples = data.frame(sample_id = "sampleA"),
+#'   data = data.frame(
+#'     sample_id = "sampleA", chrom = "chr1",
+#'     start = 1L, end = 10L, value = 1, strand = "*"
+#'   )
+#' )
+#' validate_bwg(x)
+#' @seealso [bwg_track()], [is_bwg_track()]
 #' @export
 validate_bwg <- function(x) {
   bw_assert_bwg(x)

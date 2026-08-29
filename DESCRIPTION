@@ -1,30 +1,25 @@
 Package: bwTools
 Type: Package
 Title: Native R Tools for BigWig, WIG, and bedGraph Files
-Version: 0.8.5
+Version: 0.8.6
 Authors@R: person("Rensc", role = c("aut", "cre"), email = "rensc0718@163.com")
-Description: Provides native R implementations for reading and writing local
-    BigWig files, indexed genomic retrieval, interval statistics, automatic
-    multi-track merging, explicit signal aggregation, large-file performance
-    benchmarking, and reading and writing WIG and bedGraph signal tracks.
-    Version 0.8.0 establishes the downstream-integration stability baseline,
-    while 0.8.2 hardens genomic boundary behavior, cross-slot coordinate
-    consistency, stable empty query schemas, and chromosome-end handling across
-    memory and lazy BigWig modes. Version 0.8.3 aligns scalar retrieval
-    validation with the shared genomic interval validator. Version 0.8.4 adds
-    an external compatibility validation harness for pyBigWig, rtracklayer,
-    and UCSC BigWig utilities without adding runtime dependencies. Version
-    0.8.5 hardens multi-sample and mixed-format workflows, including exact
-    strand retrieval from mixed-strand in-memory tracks and complete writer
-    manifests for selected samples. BigWig binary I/O uses base R random-access
-    operations, binary encoding, and zlib compression without bundled C or C++
-    code or external UCSC executables. Public in-memory signal coordinates are
-    1-based closed.
+Description: Provides native R tools for reading and writing local BigWig,
+    WIG, and bedGraph signal tracks, indexed genomic retrieval, exact and
+    zoom-aware interval statistics, multi-track merging, signal aggregation,
+    format conversion, and performance diagnostics. BigWig binary I/O uses
+    base R random-access operations, binary encoding, and zlib compression
+    without bundled C or C++ code or external UCSC executables. Public
+    in-memory signal coordinates are 1-based closed and are represented through
+    the standardized BwgTrack schema v2.
 License: GPL-3
 Encoding: UTF-8
 Depends: R (>= 4.2.0)
 Imports: data.table
-Suggests: testthat (>= 3.0.0)
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3

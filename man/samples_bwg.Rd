@@ -17,3 +17,16 @@ A copy of the standardized sample metadata data.table.
 \description{
 Return sample metadata
 }
+\details{
+The returned table is a copy and can be modified without changing \code{x}.
+}
+\examples{
+x <- bwg_track(samples = data.frame(sample_id = "sampleA"), data = data.frame(
+  sample_id = "sampleA", chrom = "chr1", start = 1L, end = 2L,
+  value = 1, strand = "*"
+))
+samples_bwg(x)
+}
+\seealso{
+\code{\link[=seqinfo_bwg]{seqinfo_bwg()}}, \code{\link[=metadata_bwg]{metadata_bwg()}}
+}

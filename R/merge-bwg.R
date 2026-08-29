@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-28
-# Version: dev004
+# Version: dev005
 # Function: Intelligently merge or aggregate BwgTrack-compatible signal objects
 # Input: Two or more BwgTrack-compatible objects
 # Output: A memory-mode BwgTrack containing merged or aggregated signal
@@ -722,6 +722,29 @@ bw_merge_numeric <- function(
 #' @param merge_adjacent Whether directly adjacent equal-valued output segments
 #'   should be merged.
 #' @return A memory-mode `BwgTrack` containing merged signal.
+#' @details
+#' The returned object is always memory mode and retains the public 1-based
+#' closed coordinate convention. `method = "auto"` never performs numerical
+#' averaging or summation. Arithmetic behavior must be requested explicitly.
+#'
+#' @examples
+#' x <- bwg_track(
+#'   samples = data.frame(sample_id = "sampleA"),
+#'   data = data.frame(
+#'     sample_id = "sampleA", chrom = "chr1",
+#'     start = 1L, end = 10L, value = 1, strand = "*"
+#'   )
+#' )
+#' y <- bwg_track(
+#'   samples = data.frame(sample_id = "sampleB"),
+#'   data = data.frame(
+#'     sample_id = "sampleB", chrom = "chr1",
+#'     start = 1L, end = 10L, value = 2, strand = "*"
+#'   )
+#' )
+#' merge_bwg(x, y)
+#' merge_bwg(x, y, method = "mean")
+#' @seealso [retrieve_bwg()], [write_bwg()]
 #' @export
 merge_bwg <- function(
   ...,

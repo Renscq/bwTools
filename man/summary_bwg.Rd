@@ -15,3 +15,15 @@ A one-row data.table describing the object contract and dimensions.
 \description{
 Summarize a BwgTrack object
 }
+\details{
+This is a lightweight object summary and does not calculate genomic signal
+statistics. Use \code{stats_bwg()} for interval-level quantitative summaries.
+}
+\examples{
+bw_file <- system.file("extdata", "bwtools_example.bigwig", package = "bwTools", mustWork = TRUE)
+x <- read_bwg(bw_file, sample_ids = "example")
+summary_bwg(x)
+}
+\seealso{
+\code{\link[=stats_bwg]{stats_bwg()}}, \code{\link[=samples_bwg]{samples_bwg()}}
+}

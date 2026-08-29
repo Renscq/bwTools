@@ -1,3 +1,25 @@
+# bwTools 0.8.6
+
+## Documentation and user workflow consolidation
+
+- Reduced README to a concise package entry point covering installation, the
+  standard data flow, coordinates, multi-sample use, the stable public API,
+  errors, diagnostics, and links to focused articles.
+- Added six package vignettes for getting started, reading/writing, regional
+  retrieval/statistics, merge/multi-sample workflows, file formats/coordinates,
+  and performance/compatibility validation.
+- Added pkgdown navigation that groups the 15-function public API by file I/O,
+  BwgTrack contract, signal analysis, and diagnostics.
+- Standardized roxygen details, runnable examples, and cross-references for all
+  15 exported functions without changing function bodies or public signatures.
+- Added documentation contract tests requiring stable article assets and
+  `@return`/`@examples` coverage for every exported function.
+- Extended the code-fence regression to R Markdown vignettes.
+- Added `knitr` and `rmarkdown` as documentation-only suggested dependencies;
+  runtime dependencies remain unchanged.
+- Simplified DESCRIPTION to describe current package capabilities rather than
+  embedding release-history text.
+
 # bwTools 0.8.5
 
 ## Multi-sample and mixed-format workflow hardening

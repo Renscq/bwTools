@@ -20,3 +20,18 @@ Returns stored zoom reduction levels for BigWig-backed samples in a
 standardized \code{BwgTrack}. WIG, bedGraph, and memory-only samples do not have
 BigWig zoom levels.
 }
+\details{
+Reduction levels describe stored BigWig zoom summaries. Samples without a
+BigWig backing file return no rows rather than an error.
+}
+\examples{
+bw_file <- system.file(
+  "extdata", "bwtools_example.bigwig",
+  package = "bwTools", mustWork = TRUE
+)
+x <- read_bwg(bw_file, sample_ids = "example")
+zoominfo_bwg(x)
+}
+\seealso{
+\code{\link[=stats_bwg]{stats_bwg()}}, \code{\link[=metadata_bwg]{metadata_bwg()}}
+}

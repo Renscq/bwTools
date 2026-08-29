@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-29
-# Version: dev005
+# Version: dev006
 # Function: Run structured large BigWig performance benchmarks
 # Input: One local BigWig file and benchmark configuration
 # Output: bwToolsBenchmark object with raw and summarized metrics
@@ -52,6 +52,28 @@
 #'   `regions`, `results`, and `summary` components. Memory metrics distinguish
 #'   current live R heap after garbage collection from the approximate maximum
 #'   R heap observed since `gc(reset = TRUE)`; neither metric is process RSS.
+#' @details
+#' `benchmark_bwg()` is deliberately separated from normal analysis. Writer
+#' cases use independent repetition and density guards so profiling does not
+#' accidentally trigger excessive work on dense tracks. Reported heap metrics
+#' are R-heap diagnostics rather than process resident-set size.
+#'
+#' @examples
+#' \dontrun{
+#' bw_file <- system.file(
+#'   "extdata", "bwtools_example.bigwig",
+#'   package = "bwTools", mustWork = TRUE
+#' )
+#' bench <- benchmark_bwg(
+#'   bw_file,
+#'   sample_id = "example",
+#'   region_sizes = 1000L,
+#'   iterations = 1L,
+#'   warmup = 0L
+#' )
+#' bench$summary
+#' }
+#' @seealso [read_bwg()], [retrieve_bwg()], [stats_bwg()], [write_bwg()]
 #' @export
 benchmark_bwg <- function(
   file,

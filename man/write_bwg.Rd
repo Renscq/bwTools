@@ -51,3 +51,26 @@ Writes a standardized \code{BwgTrack} to BigWig, WIG, or bedGraph files. File
 persistence is handled only by this function; retrieval, merging, and
 statistics never write files.
 }
+\details{
+BigWig output uses 0-based half-open coordinates on disk while preserving
+the 1-based closed public coordinate contract in memory. BigWig requires
+chromosome lengths and writes native zoom summaries by default. WIG and
+bedGraph can optionally be gzip-compressed.
+}
+\examples{
+\dontrun{
+bw_file <- system.file(
+  "extdata", "bwtools_example.bigwig",
+  package = "bwTools", mustWork = TRUE
+)
+x <- read_bwg(bw_file, sample_ids = "example", mode = "memory")
+write_bwg(
+  x,
+  outdir = tempfile("bwtools-write-"),
+  format = "bigwig"
+)
+}
+}
+\seealso{
+\code{\link[=read_bwg]{read_bwg()}}, \code{\link[=retrieve_bwg]{retrieve_bwg()}}
+}

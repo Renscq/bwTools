@@ -25,3 +25,22 @@ A validated object inheriting from \code{BwgTrack} and \code{bwToolsTrack}.
 \description{
 Construct a standardized BwgTrack object
 }
+\details{
+Signal coordinates supplied in \code{data} must already be 1-based closed.
+Construction normalizes standard columns, records schema version 2, and
+validates cross-slot sample/chromosome consistency before returning.
+}
+\examples{
+x <- bwg_track(
+  samples = data.frame(sample_id = "sampleA"),
+  data = data.frame(
+    sample_id = "sampleA", chrom = "chr1",
+    start = 1L, end = 10L, value = 2, strand = "+"
+  ),
+  seqinfo = data.frame(chrom = "chr1", length = 100L)
+)
+x
+}
+\seealso{
+\code{\link[=validate_bwg]{validate_bwg()}}, \code{\link[=read_bwg]{read_bwg()}}
+}

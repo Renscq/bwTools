@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-29
-# Version: dev006
+# Version: dev007
 # Function: Calculate bounded exact or zoom-accelerated interval statistics
 # Input: Validated BwgTrack object and genomic bins
 # Output: Per-bin signal statistics in 1-based closed coordinates
@@ -414,6 +414,22 @@ bw_stats_bigwig_file <- function(file, sample_id, chrom, start, end, n_bins, sta
 #'   Zoom results may be approximate when query bins partially overlap stored
 #'   zoom windows. Use `FALSE` for exact values.
 #' @return A data.table with one row per sample and genomic bin.
+#' @details
+#' Bins are constructed after known chromosome bounds are applied. Exact lazy
+#' BigWig statistics stream indexed full-resolution blocks. Zoom-aware results
+#' expose their source and stored reduction level in `source` and `resolution`.
+#'
+#' @examples
+#' bw_file <- system.file(
+#'   "extdata", "bwtools_example.bigwig",
+#'   package = "bwTools", mustWork = TRUE
+#' )
+#' x <- read_bwg(bw_file, sample_ids = "example")
+#' stats_bwg(
+#'   x, "chr1", 1L, 1000L,
+#'   n_bins = 10L, stat = "mean", use_zoom = FALSE
+#' )
+#' @seealso [retrieve_bwg()], [zoominfo_bwg()]
 #' @export
 stats_bwg <- function(
   x,

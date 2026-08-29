@@ -48,3 +48,22 @@ are clipped to the known chromosome length and unknown chromosomes are
 rejected. Queries starting beyond a known chromosome return a stable empty
 statistics table.
 }
+\details{
+Bins are constructed after known chromosome bounds are applied. Exact lazy
+BigWig statistics stream indexed full-resolution blocks. Zoom-aware results
+expose their source and stored reduction level in \code{source} and \code{resolution}.
+}
+\examples{
+bw_file <- system.file(
+  "extdata", "bwtools_example.bigwig",
+  package = "bwTools", mustWork = TRUE
+)
+x <- read_bwg(bw_file, sample_ids = "example")
+stats_bwg(
+  x, "chr1", 1L, 1000L,
+  n_bins = 10L, stat = "mean", use_zoom = FALSE
+)
+}
+\seealso{
+\code{\link[=retrieve_bwg]{retrieve_bwg()}}, \code{\link[=zoominfo_bwg]{zoominfo_bwg()}}
+}

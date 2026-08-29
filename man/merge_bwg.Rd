@@ -62,3 +62,29 @@ replicates or treatments into explicit output groups.
 File persistence is intentionally excluded. Save the returned \code{BwgTrack}
 explicitly with \code{write_bwg()}.
 }
+\details{
+The returned object is always memory mode and retains the public 1-based
+closed coordinate convention. \code{method = "auto"} never performs numerical
+averaging or summation. Arithmetic behavior must be requested explicitly.
+}
+\examples{
+x <- bwg_track(
+  samples = data.frame(sample_id = "sampleA"),
+  data = data.frame(
+    sample_id = "sampleA", chrom = "chr1",
+    start = 1L, end = 10L, value = 1, strand = "*"
+  )
+)
+y <- bwg_track(
+  samples = data.frame(sample_id = "sampleB"),
+  data = data.frame(
+    sample_id = "sampleB", chrom = "chr1",
+    start = 1L, end = 10L, value = 2, strand = "*"
+  )
+)
+merge_bwg(x, y)
+merge_bwg(x, y, method = "mean")
+}
+\seealso{
+\code{\link[=retrieve_bwg]{retrieve_bwg()}}, \code{\link[=write_bwg]{write_bwg()}}
+}

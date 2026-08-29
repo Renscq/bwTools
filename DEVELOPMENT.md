@@ -1,12 +1,12 @@
 # bwTools development status
 
-Current development release: **0.8.5**
+Current development release: **0.8.6**
 
-0.8.5 extends the 0.8.x stabilization phase to multi-sample and mixed-format
-workflows. It retains the 0.8.4 external compatibility harness, the 0.8.0 public
-API stability baseline, the 0.8.2 boundary contract, and the 0.7.5 binary I/O
-performance paths while tightening strand retrieval and writer-manifest
-completeness for downstream integration.
+0.8.6 consolidates user-facing documentation after the 0.8.x API, boundary,
+compatibility, and multi-sample hardening work. The 15-function public API,
+BwgTrack schema v2, and native BigWig binary algorithms remain unchanged while
+README, vignettes, roxygen examples, and pkgdown navigation are made ready for
+release-oriented use.
 
 ---
 
@@ -46,6 +46,30 @@ Acceptance criteria:
   when pyBigWig, rtracklayer, or UCSC utilities are available.
 - External reference implementations remain outside package runtime
   dependencies and normal test requirements.
+
+
+## 0.8.6 documentation and user workflow consolidation
+
+Status: **implemented; local vignette build and R CMD check required.**
+
+Scope:
+
+- Keep README concise and focused on first-use workflows.
+- Move detailed guidance into focused package vignettes.
+- Ensure all 15 exported functions have explicit return and example docs.
+- Add pkgdown reference and article navigation without changing runtime APIs.
+- Keep documentation-only dependencies in `Suggests`.
+- Preserve all binary I/O, statistics, retrieval, merge, and schema behavior.
+
+Acceptance criteria:
+
+- README contains no development-status section or release-history narrative.
+- Six focused vignettes cover the normal user workflow and advanced diagnostics.
+- Every public export has `@return` and `@examples` roxygen documentation.
+- R Markdown code fences follow the same braced language-tag convention.
+- `DESCRIPTION` declares `VignetteBuilder: knitr` and documentation-only
+  suggested dependencies.
+- Public function signatures and BwgTrack schema v2 remain unchanged.
 
 ## 0.8.5 multi-sample and mixed-format workflow hardening
 

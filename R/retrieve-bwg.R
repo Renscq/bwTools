@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-29
-# Version: dev009
+# Version: dev010
 # Function: Retrieve bounded genomic regions from BwgTrack-compatible objects
 # Input: BwgTrack and genomic region(s)
 # Output: In-memory signal data.table or BwgTrack subset
@@ -294,6 +294,20 @@ bw_retrieve_seqinfo <- function(object, sample_ids, regions) {
 #' @param result Result type. `data` returns the standardized signal data.table;
 #'   `track` returns a memory-mode `BwgTrack`.
 #' @return A signal data.table or memory-mode `BwgTrack`.
+#' @details
+#' Lazy BigWig retrieval uses the on-disk R-tree index. Memory-mode retrieval
+#' subsets standardized signal rows. Empty queries return stable typed outputs;
+#' `result = "track"` returns a memory-mode `BwgTrack` suitable for downstream
+#' merge or write operations.
+#'
+#' @examples
+#' bw_file <- system.file(
+#'   "extdata", "bwtools_example.bigwig",
+#'   package = "bwTools", mustWork = TRUE
+#' )
+#' x <- read_bwg(bw_file, sample_ids = "example")
+#' retrieve_bwg(x, "chr1", 500L, 1600L)
+#' @seealso [stats_bwg()], [write_bwg()]
 #' @export
 retrieve_bwg <- function(
   x,
@@ -369,6 +383,16 @@ retrieve_bwg <- function(
 #' @param sample_ids Optional sample IDs. Defaults to all samples.
 #' @return A copy of the standardized `sample_id`, `chrom`, and `length`
 #'   metadata table.
+#' @details
+#' BigWig-backed samples usually provide complete chromosome lengths. Text
+#' formats may contain `NA` lengths when the source file does not encode them.
+#' The returned table is a copy.
+#'
+#' @examples
+#' bw_file <- system.file("extdata", "bwtools_example.bigwig", package = "bwTools", mustWork = TRUE)
+#' x <- read_bwg(bw_file, sample_ids = "example")
+#' seqinfo_bwg(x)
+#' @seealso [samples_bwg()], [metadata_bwg()]
 #' @export
 seqinfo_bwg <- function(x, sample_ids = NULL) {
   bw_assert_bwg(x)
@@ -403,6 +427,15 @@ seqinfo_bwg <- function(x, sample_ids = NULL) {
 #'
 #' @param x A validated `BwgTrack` object.
 #' @return A one-row data.table describing the object contract and dimensions.
+#' @details
+#' This is a lightweight object summary and does not calculate genomic signal
+#' statistics. Use `stats_bwg()` for interval-level quantitative summaries.
+#'
+#' @examples
+#' bw_file <- system.file("extdata", "bwtools_example.bigwig", package = "bwTools", mustWork = TRUE)
+#' x <- read_bwg(bw_file, sample_ids = "example")
+#' summary_bwg(x)
+#' @seealso [stats_bwg()], [samples_bwg()]
 #' @export
 summary_bwg <- function(x) {
   bw_assert_bwg(x)

@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-28
-# Version: dev006
+# Version: dev007
 # Function: Read BigWig, WIG, and bedGraph files into standardized BwgTrack objects
 # Input: One or more local genomic signal files
 # Output: Validated BwgTrack object
@@ -18,6 +18,20 @@
 #' @param mode Loading mode. `auto` uses lazy access when all inputs are BigWig
 #'   and memory mode otherwise. `lazy` is supported for BigWig inputs only.
 #' @return A validated `BwgTrack` object.
+#' @details
+#' Public signal coordinates are converted to 1-based closed coordinates on
+#' input. BigWig-only input is lazy in `mode = "auto"`; WIG, bedGraph, and
+#' mixed-format input are materialized in memory. Sample IDs must be unique
+#' within one call.
+#'
+#' @examples
+#' bw_file <- system.file(
+#'   "extdata", "bwtools_example.bigwig",
+#'   package = "bwTools", mustWork = TRUE
+#' )
+#' x <- read_bwg(bw_file, sample_ids = "example")
+#' summary_bwg(x)
+#' @seealso [detect_bwg_format()], [write_bwg()], [bwg_track()]
 #' @export
 read_bwg <- function(
   files,

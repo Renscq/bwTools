@@ -18,3 +18,16 @@ metadata table.
 \description{
 Return sample-specific chromosome metadata
 }
+\details{
+BigWig-backed samples usually provide complete chromosome lengths. Text
+formats may contain \code{NA} lengths when the source file does not encode them.
+The returned table is a copy.
+}
+\examples{
+bw_file <- system.file("extdata", "bwtools_example.bigwig", package = "bwTools", mustWork = TRUE)
+x <- read_bwg(bw_file, sample_ids = "example")
+seqinfo_bwg(x)
+}
+\seealso{
+\code{\link[=samples_bwg]{samples_bwg()}}, \code{\link[=metadata_bwg]{metadata_bwg()}}
+}

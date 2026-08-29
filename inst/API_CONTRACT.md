@@ -1,15 +1,16 @@
 # bwTools public API contract
 
-Version: **schema 2 / bwTools 0.8.5**
+Version: **schema 2 / bwTools 0.8.6**
 
 Version 0.8.0 is the downstream-integration stability baseline. Packages such
 as GeneTrackR should depend on the public functions and schemas documented here
 rather than private `bwTools:::` implementation details.
 
-Version 0.8.5 preserves the same public contract. The optional external
-BigWig compatibility harness introduced in 0.8.4 remains outside runtime
-behavior. Multi-sample strand retrieval and writer-manifest completeness are
-hardened without changing public function signatures or BwgTrack schema v2.
+Version 0.8.6 preserves the same public contract. Documentation is reorganized
+into focused vignettes and all exported functions receive standardized examples
+and return documentation. The optional external compatibility harness and the
+0.8.5 multi-sample behavior remain unchanged, with no public signature or
+BwgTrack schema v2 changes.
 
 ## Stable public API
 

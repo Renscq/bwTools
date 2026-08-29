@@ -15,3 +15,13 @@ Logical scalar.
 \description{
 Test whether an object follows the standardized BwgTrack contract
 }
+\details{
+Unlike \code{validate_bwg()}, this predicate returns \code{FALSE} for an invalid object
+rather than raising an error.
+}
+\examples{
+is_bwg_track(list())
+}
+\seealso{
+\code{\link[=validate_bwg]{validate_bwg()}}, \code{\link[=bwg_track]{bwg_track()}}
+}

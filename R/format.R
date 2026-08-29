@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-28
-# Version: dev003
+# Version: dev004
 # Function: Detect supported genomic signal formats without decoding binary files as text
 # Input: Local file path
 # Output: Standardized format name
@@ -37,6 +37,18 @@ bw_read_format_probe <- function(file, n = 4096L) {
 #'
 #' @param file Local signal file path.
 #' @return One of `bigwig`, `wig`, or `bedgraph`.
+#' @details
+#' BigWig is detected from its binary magic signature before text decoding.
+#' WIG and bedGraph are then identified from extension and content. Invalid or
+#' empty files raise a `bwTools_error`.
+#'
+#' @examples
+#' bw_file <- system.file(
+#'   "extdata", "bwtools_example.bigwig",
+#'   package = "bwTools", mustWork = TRUE
+#' )
+#' detect_bwg_format(bw_file)
+#' @seealso [read_bwg()]
 #' @export
 detect_bwg_format <- function(file) {
   file <- bw_validate_local_file(file)

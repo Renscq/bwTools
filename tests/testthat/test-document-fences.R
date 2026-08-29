@@ -7,7 +7,7 @@ test_that("documentation code fences use braced language tags", {
 
   files <- list.files(
     root,
-    pattern = "\\.(md|qmd)$",
+    pattern = "\\.(md|qmd|Rmd)$",
     recursive = TRUE,
     full.names = TRUE
   )

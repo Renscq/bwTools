@@ -1,0 +1,47 @@
+template:
+  bootstrap: 5
+
+navbar:
+  structure:
+    left: [reference, articles, news]
+    right: [search]
+
+reference:
+- title: File I/O
+  desc: Read, detect, and write genomic signal files.
+- contents:
+  - detect_bwg_format
+  - read_bwg
+  - write_bwg
+- title: BwgTrack contract
+  desc: Construct, validate, inspect, and summarize standardized tracks.
+- contents:
+  - bwg_track
+  - is_bwg_track
+  - validate_bwg
+  - samples_bwg
+  - seqinfo_bwg
+  - metadata_bwg
+  - summary_bwg
+  - zoominfo_bwg
+- title: Signal analysis
+  desc: Retrieve, summarize, merge, and aggregate genomic signal.
+- contents:
+  - retrieve_bwg
+  - stats_bwg
+  - merge_bwg
+- title: Diagnostics
+  desc: Profile native BigWig workflows.
+- contents:
+  - benchmark_bwg
+
+articles:
+- title: Workflows
+  navbar: ~
+  contents:
+  - getting-started
+  - reading-writing
+  - retrieve-stats
+  - merge-multisample
+  - file-formats
+  - performance-compatibility

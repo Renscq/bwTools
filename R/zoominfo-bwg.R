@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-28
-# Version: dev002
+# Version: dev003
 # Function: Expose BigWig zoom-level metadata through the standardized BwgTrack API
 # Input: BwgTrack object
 # Output: Zoom metadata table
@@ -28,6 +28,18 @@ bw_empty_zoominfo <- function(include_sample = FALSE) {
 #' @param sample_ids Optional sample IDs. Defaults to all samples.
 #' @return A data.table containing `sample_id`, `level`, `data_offset`, and
 #'   `index_offset`.
+#' @details
+#' Reduction levels describe stored BigWig zoom summaries. Samples without a
+#' BigWig backing file return no rows rather than an error.
+#'
+#' @examples
+#' bw_file <- system.file(
+#'   "extdata", "bwtools_example.bigwig",
+#'   package = "bwTools", mustWork = TRUE
+#' )
+#' x <- read_bwg(bw_file, sample_ids = "example")
+#' zoominfo_bwg(x)
+#' @seealso [stats_bwg()], [metadata_bwg()]
 #' @export
 zoominfo_bwg <- function(x, sample_ids = NULL) {
   bw_assert_bwg(x)

@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-29
-# Version: dev005
+# Version: dev006
 # Function: Define and access the standardized BwgTrack object contract
 # Input: Sample metadata, signal data, sequence metadata, and package metadata
 # Output: Standardized BwgTrack-compatible S3 object
@@ -172,6 +172,22 @@ bw_normalize_seqinfo_table <- function(seqinfo, sample_ids) {
 #'   signal intervals may not exceed a known chromosome length.
 #' @param meta Optional metadata list.
 #' @return A validated object inheriting from `BwgTrack` and `bwToolsTrack`.
+#' @details
+#' Signal coordinates supplied in `data` must already be 1-based closed.
+#' Construction normalizes standard columns, records schema version 2, and
+#' validates cross-slot sample/chromosome consistency before returning.
+#'
+#' @examples
+#' x <- bwg_track(
+#'   samples = data.frame(sample_id = "sampleA"),
+#'   data = data.frame(
+#'     sample_id = "sampleA", chrom = "chr1",
+#'     start = 1L, end = 10L, value = 2, strand = "+"
+#'   ),
+#'   seqinfo = data.frame(chrom = "chr1", length = 100L)
+#' )
+#' x
+#' @seealso [validate_bwg()], [read_bwg()]
 #' @export
 bwg_track <- function(samples, data = NULL, seqinfo = NULL, meta = list()) {
   if (!is.list(meta)) {
@@ -201,6 +217,13 @@ bwg_track <- function(samples, data = NULL, seqinfo = NULL, meta = list()) {
 #'
 #' @param x An R object.
 #' @return Logical scalar.
+#' @details
+#' Unlike `validate_bwg()`, this predicate returns `FALSE` for an invalid object
+#' rather than raising an error.
+#'
+#' @examples
+#' is_bwg_track(list())
+#' @seealso [validate_bwg()], [bwg_track()]
 #' @export
 is_bwg_track <- function(x) {
   length(bw_contract_issues(x)) == 0L
@@ -211,6 +234,16 @@ is_bwg_track <- function(x) {
 #' @param x A validated `BwgTrack` object.
 #' @param sample_ids Optional sample IDs. Defaults to all samples.
 #' @return A copy of the standardized sample metadata data.table.
+#' @details
+#' The returned table is a copy and can be modified without changing `x`.
+#'
+#' @examples
+#' x <- bwg_track(samples = data.frame(sample_id = "sampleA"), data = data.frame(
+#'   sample_id = "sampleA", chrom = "chr1", start = 1L, end = 2L,
+#'   value = 1, strand = "*"
+#' ))
+#' samples_bwg(x)
+#' @seealso [seqinfo_bwg()], [metadata_bwg()]
 #' @export
 samples_bwg <- function(x, sample_ids = NULL) {
   bw_assert_bwg(x)
@@ -221,6 +254,18 @@ samples_bwg <- function(x, sample_ids = NULL) {
 #'
 #' @param x A validated `BwgTrack` object.
 #' @return The standardized metadata list.
+#' @details
+#' Standard metadata include `coordinate`, `schema_version`, `backend`, and
+#' `mode`. Treat returned metadata as descriptive object state rather than a
+#' mechanism for mutating the track contract.
+#'
+#' @examples
+#' x <- bwg_track(samples = data.frame(sample_id = "sampleA"), data = data.frame(
+#'   sample_id = "sampleA", chrom = "chr1", start = 1L, end = 2L,
+#'   value = 1, strand = "*"
+#' ))
+#' metadata_bwg(x)
+#' @seealso [samples_bwg()], [seqinfo_bwg()]
 #' @export
 metadata_bwg <- function(x) {
   bw_assert_bwg(x)

@@ -32,3 +32,20 @@ A validated \code{BwgTrack} object.
 Reads one or more local BigWig, WIG, or bedGraph files into the standardized
 bwTools \code{BwgTrack} contract.
 }
+\details{
+Public signal coordinates are converted to 1-based closed coordinates on
+input. BigWig-only input is lazy in \code{mode = "auto"}; WIG, bedGraph, and
+mixed-format input are materialized in memory. Sample IDs must be unique
+within one call.
+}
+\examples{
+bw_file <- system.file(
+  "extdata", "bwtools_example.bigwig",
+  package = "bwTools", mustWork = TRUE
+)
+x <- read_bwg(bw_file, sample_ids = "example")
+summary_bwg(x)
+}
+\seealso{
+\code{\link[=detect_bwg_format]{detect_bwg_format()}}, \code{\link[=write_bwg]{write_bwg()}}, \code{\link[=bwg_track]{bwg_track()}}
+}

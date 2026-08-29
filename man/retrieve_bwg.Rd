@@ -51,3 +51,20 @@ samples whose \code{seqinfo} lengths are all known; length-incomplete metadata
 remains permissive because it may describe only chromosomes observed in the
 signal.
 }
+\details{
+Lazy BigWig retrieval uses the on-disk R-tree index. Memory-mode retrieval
+subsets standardized signal rows. Empty queries return stable typed outputs;
+\code{result = "track"} returns a memory-mode \code{BwgTrack} suitable for downstream
+merge or write operations.
+}
+\examples{
+bw_file <- system.file(
+  "extdata", "bwtools_example.bigwig",
+  package = "bwTools", mustWork = TRUE
+)
+x <- read_bwg(bw_file, sample_ids = "example")
+retrieve_bwg(x, "chr1", 500L, 1600L)
+}
+\seealso{
+\code{\link[=stats_bwg]{stats_bwg()}}, \code{\link[=write_bwg]{write_bwg()}}
+}
