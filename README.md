@@ -1,9 +1,11 @@
+<!-- README.md is generated from README.qmd. Do not edit README.md directly. -->
+
 # bwTools
 
 [![R-CMD-check](https://github.com/Renscq/bwTools/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/Renscq/bwTools/actions/workflows/R-CMD-check.yaml)
 [![pkgdown](https://github.com/Renscq/bwTools/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/Renscq/bwTools/actions/workflows/pkgdown.yaml)
 
-Current release: **0.8.9**
+Current release: **0.8.10**
 
 `bwTools` provides native-R tools for BigWig, WIG, and bedGraph genomic signal
 tracks. It supports BigWig binary reading and writing, indexed regional
@@ -27,7 +29,7 @@ code, or UCSC executables at runtime.
 
 Install the development release from GitHub:
 
-```{r}
+```r
 install.packages("pak")
 pak::pak("Renscq/bwTools")
 ```
@@ -36,7 +38,7 @@ Package website: <https://renscq.github.io/bwTools/>
 
 For package development and local validation:
 
-```{r}
+```r
 devtools::document()
 devtools::test()
 devtools::check()
@@ -46,7 +48,7 @@ devtools::check()
 
 The package ships a small BigWig example:
 
-```{r}
+```r
 library(bwTools)
 
 bw_file <- system.file(
@@ -59,7 +61,7 @@ bw_file <- system.file(
 
 Read it lazily:
 
-```{r}
+```r
 bw <- read_bwg(
   bw_file,
   sample_ids = "example"
@@ -72,7 +74,7 @@ seqinfo_bwg(bw)
 
 Retrieve a genomic interval using public **1-based closed** coordinates:
 
-```{r}
+```r
 signal <- retrieve_bwg(
   bw,
   chrom = "chr1",
@@ -83,7 +85,7 @@ signal <- retrieve_bwg(
 
 Calculate exact statistics:
 
-```{r}
+```r
 stats <- stats_bwg(
   bw,
   chrom = "chr1",
@@ -97,7 +99,7 @@ stats <- stats_bwg(
 
 Create a writable regional track and persist it:
 
-```{r}
+```r
 region_track <- retrieve_bwg(
   bw,
   chrom = "chr1",
@@ -116,7 +118,7 @@ manifest <- write_bwg(
 
 The standard data flow is:
 
-```{text}
+```text
 file
   ↓
 read_bwg()
@@ -136,7 +138,7 @@ the file boundary.
 
 A `BwgTrack` contains:
 
-```{text}
+```text
 BwgTrack
 ├── samples
 ├── data
@@ -153,7 +155,7 @@ metadata through `samples_bwg()`, `seqinfo_bwg()`, `metadata_bwg()`, and
 
 `read_bwg()` accepts multiple files with explicit sample IDs and strand labels:
 
-```{r}
+```r
 bedgraph_file <- system.file(
   "extdata",
   "bwtools_example.bedGraph",
@@ -212,7 +214,7 @@ The 15-function public API and BwgTrack schema v2 are regression-tested.
 Intentional user-facing errors inherit from `bwTools_error`, allowing downstream
 packages to catch package errors without matching English text:
 
-```{r}
+```r
 tryCatch(
   retrieve_bwg(bw, "chr1", 0L, 100L),
   bwTools_error = function(e) conditionMessage(e)

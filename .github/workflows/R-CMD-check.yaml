@@ -34,13 +34,16 @@ jobs:
           r-version: ${{ matrix.config.r }}
           http-user-agent: ${{ matrix.config.http-user-agent }}
 
-      - name: Check repository contract
-        run: Rscript tools/check-repository.003.R
-
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: any::rcmdcheck
           needs: check
+
+      - name: Render README
+        run: quarto render README.qmd
+
+      - name: Check repository contract
+        run: Rscript tools/check-repository.004.R
 
       - uses: r-lib/actions/check-r-package@v2
         with:

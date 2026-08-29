@@ -1,13 +1,13 @@
 # BigWig implementation compatibility
 
-Version: **bwTools 0.8.9**
+Version: **bwTools 0.8.10**
 
 bwTools implements local BigWig binary I/O in R. External implementations are
 used only as independent validation references and are not runtime dependencies.
 
 ## Compatibility targets
 
-The compatibility harness introduced in 0.8.4 and retained in 0.8.9 supports:
+The compatibility harness introduced in 0.8.4 and retained in 0.8.10 supports:
 
 ```{text}
 pyBigWig / libBigWig

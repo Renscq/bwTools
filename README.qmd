@@ -6,12 +6,14 @@ execute:
   eval: false
 ---
 
+<!-- README.md is generated from README.qmd. Do not edit README.md directly. -->
+
 # bwTools
 
 [![R-CMD-check](https://github.com/Renscq/bwTools/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/Renscq/bwTools/actions/workflows/R-CMD-check.yaml)
 [![pkgdown](https://github.com/Renscq/bwTools/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/Renscq/bwTools/actions/workflows/pkgdown.yaml)
 
-Current release: **0.8.9**
+Current release: **0.8.10**
 
 `bwTools` provides native-R tools for BigWig, WIG, and bedGraph genomic signal
 tracks. It supports BigWig binary reading and writing, indexed regional
@@ -124,7 +126,7 @@ manifest <- write_bwg(
 
 The standard data flow is:
 
-```{text}
+```{.text}
 file
   ↓
 read_bwg()
@@ -144,7 +146,7 @@ the file boundary.
 
 A `BwgTrack` contains:
 
-```{text}
+```{.text}
 BwgTrack
 ├── samples
 ├── data

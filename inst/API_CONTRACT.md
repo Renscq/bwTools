@@ -1,12 +1,12 @@
 # bwTools public API contract
 
-Version: **schema 2 / bwTools 0.8.9**
+Version: **schema 2 / bwTools 0.8.10**
 
 Version 0.8.0 is the downstream-integration stability baseline. Packages such
 as GeneTrackR should depend on the public functions and schemas documented here
 rather than private `bwTools:::` implementation details.
 
-Version 0.8.9 preserves the same public contract. R CMD check portability
+Version 0.8.10 preserves the same public contract. R CMD check portability
 fixes preserve every exported signature and BwgTrack schema-v2 field. Internal changes are limited to test portability, codetools NSE
 declarations, and explicit namespace qualification for benchmark memory metrics.
 
