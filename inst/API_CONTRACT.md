@@ -1,13 +1,14 @@
 # bwTools public API contract
 
-Version: **schema 2 / bwTools 0.8.3**
+Version: **schema 2 / bwTools 0.8.4**
 
 Version 0.8.0 is the downstream-integration stability baseline. Packages such
 as GeneTrackR should depend on the public functions and schemas documented here
 rather than private `bwTools:::` implementation details.
 
-Version 0.8.3 preserves the same contract and only aligns scalar retrieval
-interval validation with the shared public query rules.
+Version 0.8.4 preserves the same public contract and adds only an optional
+external BigWig compatibility validation harness. External reference software is
+not part of package runtime behavior or the public API.
 
 ## Stable public API
 
@@ -260,6 +261,22 @@ BwgTrack → bedGraph.gz         → BwgTrack
 
 BigWig zoom metadata may differ according to writer options; full-resolution
 signal must not.
+
+Starting with 0.8.4, an optional installed compatibility harness can validate
+BigWig interoperability against independent implementations when they are
+available:
+
+```{text}
+pyBigWig / libBigWig
+rtracklayer
+UCSC BigWig utilities
+```
+
+These implementations are development references only. They are not runtime
+dependencies and are not part of the 15-function public API. Compatibility is
+judged by chromosome lengths, missing-signal positions, and signal values rather
+than byte-identical files or identical internal block segmentation. See
+`inst/COMPATIBILITY.md`.
 
 ## Benchmark contract
 

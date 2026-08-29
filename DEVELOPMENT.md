@@ -1,11 +1,12 @@
 # bwTools development status
 
-Current development release: **0.8.3**
+Current development release: **0.8.4**
 
-0.8.3 is a focused consistency patch on the 0.8.2 boundary-hardening release.
-It keeps the 0.8.0 public API stability baseline and 0.7.5 binary I/O
-performance paths while making scalar `retrieve_bwg()` interval validation
-reuse the shared genomic query validator already used by `stats_bwg()`.
+0.8.4 extends the 0.8.x stabilization phase with an installed, optional
+cross-implementation BigWig compatibility harness. It keeps the 0.8.0 public
+API stability baseline, the 0.8.2 boundary contract, and the 0.7.5 binary I/O
+performance paths unchanged while validating bwTools files against independent
+pyBigWig/libBigWig, rtracklayer, and UCSC implementations when available.
 
 ---
 
@@ -13,7 +14,7 @@ reuse the shared genomic query validator already used by `stats_bwg()`.
 
 ## 0.8.x - API and boundary hardening
 
-Status: **0.8.3 implemented; local R verification required.**
+Status: **0.8.4 implemented; local R and external compatibility verification required.**
 
 Scope:
 
@@ -41,6 +42,32 @@ Acceptance criteria:
   BigWig, WIG, and bedGraph round trips.
 - Existing public function signatures and schema-v2 core field types do not
   change.
+- External BigWig compatibility is reproducibly validated in both directions
+  when pyBigWig, rtracklayer, or UCSC utilities are available.
+- External reference implementations remain outside package runtime
+  dependencies and normal test requirements.
+
+## 0.8.4 external compatibility validation
+
+Status: **harness implemented; reference implementations must be run locally.**
+
+The installed runner is:
+
+```{text}
+inst/compatibility/run-compatibility.001.R
+```
+
+Supported reference implementations:
+
+```{text}
+pyBigWig / libBigWig
+rtracklayer
+UCSC bigWigInfo + bigWigToBedGraph + bedGraphToBigWig
+```
+
+The runner writes a machine-readable `compatibility-report.tsv`. Missing tools
+are `SKIP` by default; detected incompatibilities are `FAIL`. `--strict` turns
+missing reference implementations into a non-zero release-validation result.
 
 
 ## Design contract

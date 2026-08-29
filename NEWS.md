@@ -1,3 +1,27 @@
+# bwTools 0.8.4
+
+## Cross-implementation BigWig compatibility validation
+
+- Added an installed, optional compatibility harness for pyBigWig/libBigWig,
+  Bioconductor rtracklayer, and UCSC BigWig command-line utilities.
+- The harness validates both `bwTools -> external` and `external -> bwTools`
+  directions when a reference implementation is available.
+- Both zoom-disabled and zoom-enabled bwTools BigWig outputs are supplied to
+  external readers.
+- Compatibility comparisons use chromosome lengths, missing-signal positions,
+  and per-base signal values rather than byte-identical files or identical
+  internal block segmentation.
+- External implementations remain development-time references only and are not
+  added to `Depends`, `Imports`, or normal package runtime code.
+- Unavailable implementations are reported as `SKIP`; detected disagreements
+  are reported as `FAIL` with a non-zero runner exit status.
+- Added a machine-readable `compatibility-report.tsv` output and strict mode for
+  prepared release-validation environments.
+- Added regression tests that protect the compatibility assets and runtime
+  dependency policy.
+- No public API signatures, BwgTrack schema, or native BigWig reader/writer
+  algorithms changed.
+
 # bwTools 0.8.3
 
 ## Scalar retrieval validation consistency

@@ -8,7 +8,7 @@ execute:
 
 # bwTools
 
-Current development release: **0.8.3**
+Current development release: **0.8.4**
 
 `bwTools` provides native-R reading, writing, indexed retrieval, merging,
 statistics, and performance diagnostics for BigWig, WIG, and bedGraph genomic
@@ -18,8 +18,10 @@ Version 0.8.0 is the **API-stability baseline** before downstream integration.
 The optimized BigWig reader, writer, zoom pyramid, indexed retrieval, and
 exact/zoom statistics established in 0.7.x are retained. Version 0.8.2 hardens
 chromosome boundaries, empty query behavior, and `data`/`seqinfo` consistency.
-Version 0.8.3 aligns scalar retrieval interval validation with `stats_bwg()`
-without changing the 15-function public API or BwgTrack schema v2.
+Version 0.8.3 aligns scalar retrieval interval validation with `stats_bwg()`.
+Version 0.8.4 adds reproducible external BigWig compatibility validation without
+changing the 15-function public API, BwgTrack schema v2, or runtime dependency
+policy.
 
 ## Design principles
 
@@ -565,7 +567,54 @@ bench_write$summary
 The benchmark reports approximate R heap behavior, not operating-system RSS.
 It does not clear the operating-system file cache.
 
-## 11. API stability rules
+## 11. External BigWig compatibility validation
+
+Version 0.8.4 ships an optional validation harness for independent BigWig
+implementations. These tools are **not** bwTools runtime dependencies.
+
+Supported references are:
+
+```{text}
+pyBigWig / libBigWig
+rtracklayer
+UCSC bigWigInfo, bigWigToBedGraph, and bedGraphToBigWig
+```
+
+Locate the installed runner from R:
+
+```{r}
+runner <- system.file(
+  "compatibility",
+  "run-compatibility.001.R",
+  package = "bwTools"
+)
+runner
+```
+
+Run it from a shell:
+
+```{bash}
+Rscript /path/to/run-compatibility.001.R \
+  --output bwtools-compatibility
+```
+
+The output is:
+
+```{text}
+bwtools-compatibility/compatibility-report.tsv
+```
+
+Each available implementation is checked in both directions. Missing reference
+software is recorded as `SKIP`; a detected signal mismatch is `FAIL`. Use
+`--strict` in a prepared release-validation environment when all supported
+references must be present and pass.
+
+The comparison is semantic rather than byte-for-byte: chromosome lengths,
+missing-signal positions, and signal values must agree, while external writers
+may choose different BigWig block or interval segmentation. See
+`inst/COMPATIBILITY.md` for the validation contract.
+
+## 12. API stability rules
 
 Starting with 0.8.0, downstream packages should rely on the documented public
 API only.
@@ -586,7 +635,7 @@ The following are regression-tested:
 Functions accessed with `bwTools:::` remain internal implementation details and
 are not part of this compatibility promise.
 
-## 12. Quick regression validation
+## 13. Quick regression validation
 
 The bundled files can be used for a short installation check:
 
@@ -644,5 +693,6 @@ devtools::check()
 - **0.9.x** — release-candidate checks and API freeze.
 - **1.0.0** — stable cross-platform release.
 
-See `inst/API_CONTRACT.md` and `DEVELOPMENT.md` for the formal downstream
-integration contract and development acceptance criteria.
+See `inst/API_CONTRACT.md`, `inst/COMPATIBILITY.md`, and `DEVELOPMENT.md` for
+the formal downstream integration, external validation, and development
+acceptance criteria.
