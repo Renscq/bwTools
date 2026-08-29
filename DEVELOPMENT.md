@@ -1,16 +1,47 @@
 # bwTools development status
 
-Current development release: **0.8.6**
+Current development release: **0.8.7**
 
-0.8.6 consolidates user-facing documentation after the 0.8.x API, boundary,
-compatibility, and multi-sample hardening work. The 15-function public API,
-BwgTrack schema v2, and native BigWig binary algorithms remain unchanged while
-README, vignettes, roxygen examples, and pkgdown navigation are made ready for
-release-oriented use.
+0.8.7 adds release-quality repository automation after the 0.8.6 documentation
+consolidation. GitHub Actions now run cross-platform R CMD check and build/deploy
+the pkgdown site, while repository-only checks are separated from package tests.
+The 15-function public API, BwgTrack schema v2, and all production R function
+bodies remain unchanged.
 
 ---
 
 # bwTools development roadmap
+
+## 0.8.7 release-quality checks and GitHub pkgdown deployment
+
+Status: **implemented; GitHub Actions and Pages deployment require repository push.**
+
+Scope:
+
+- Add cross-platform `R CMD check` CI for release, devel, and oldrel R.
+- Build and deploy pkgdown automatically on GitHub pushes and releases.
+- Keep GitHub/pkgdown repository files outside the source-package tarball.
+- Separate repository-only contract checks from installed package testthat tests.
+- Add repository, issue, and website metadata without changing package APIs.
+- Keep README source synchronized and retain the no-Development-status rule.
+
+Acceptance criteria:
+
+- `tools/check-repository.001.R` validates repository configuration before CI work.
+- Package testthat logic does not require Rbuildignored `_pkgdown.yml` or README.qmd.
+- GitHub pkgdown workflow builds `docs/` and deploys it to `gh-pages`.
+- R-CMD-check workflow covers macOS release, Windows release, Ubuntu devel,
+  Ubuntu release, and Ubuntu oldrel-1.
+- `_pkgdown.yml` resolves the GitHub source, issue tracker, and published site.
+- No public signatures, schema fields, or production R function bodies change.
+
+### GitHub pkgdown deployment
+
+After pushing the repository to `https://github.com/Renscq/bwTools`, confirm
+that the `pkgdown.yaml` workflow succeeds. On first deployment, open GitHub
+**Settings > Pages** and select **Deploy from a branch**, branch `gh-pages`,
+folder `/ (root)`. The published site is configured as
+`https://renscq.github.io/bwTools/`.
 
 ## 0.8.x - API and boundary hardening
 

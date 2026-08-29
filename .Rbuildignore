@@ -4,3 +4,6 @@
 ^\.github$
 ^_pkgdown\.yml$
 ^docs$
+^DEVELOPMENT\.md$
+^README\.qmd$
+^tools$

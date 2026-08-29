@@ -1,4 +1,4 @@
-test_that("user documentation structure is stable", {
+test_that("installed user documentation structure is stable", {
   root <- normalizePath(
     testthat::test_path("..", ".."),
     winslash = "/",
@@ -19,14 +19,13 @@ test_that("user documentation structure is stable", {
   )
 
   expect_true(all(file.exists(expected_vignettes)))
-  expect_true(file.exists(file.path(root, "_pkgdown.yml")))
 
   description <- readLines(file.path(root, "DESCRIPTION"), warn = FALSE)
   expect_true(any(grepl("^VignetteBuilder: knitr$", description)))
   expect_true(any(grepl("knitr", description, fixed = TRUE)))
   expect_true(any(grepl("rmarkdown", description, fixed = TRUE)))
 
-  readme <- readLines(file.path(root, "README.qmd"), warn = FALSE)
+  readme <- readLines(file.path(root, "README.md"), warn = FALSE)
   expect_false(any(grepl("Development status", readme, fixed = TRUE)))
   expect_true(any(grepl("^## Quick start$", readme)))
   expect_true(any(grepl("^## Documentation$", readme)))
@@ -40,7 +39,7 @@ test_that("user documentation structure is stable", {
   }
 })
 
-test_that("all exported functions remain discoverable in user documentation", {
+test_that("all exported functions remain discoverable in shipped documentation", {
   root <- normalizePath(
     testthat::test_path("..", ".."),
     winslash = "/",
@@ -51,7 +50,7 @@ test_that("all exported functions remain discoverable in user documentation", {
   exports <- sub("^export\\(([^)]+)\\)$", "\\1", grep("^export\\(", namespace, value = TRUE))
 
   docs <- c(
-    readLines(file.path(root, "README.qmd"), warn = FALSE),
+    readLines(file.path(root, "README.md"), warn = FALSE),
     unlist(lapply(
       list.files(file.path(root, "vignettes"), pattern = "\\.Rmd$", full.names = TRUE),
       readLines,

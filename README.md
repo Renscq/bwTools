@@ -1,14 +1,9 @@
----
-title: "bwTools"
-format: gfm
-execute:
-  echo: true
-  eval: false
----
-
 # bwTools
 
-Current release: **0.8.6**
+[![R-CMD-check](https://github.com/Renscq/bwTools/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/Renscq/bwTools/actions/workflows/R-CMD-check.yaml)
+[![pkgdown](https://github.com/Renscq/bwTools/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/Renscq/bwTools/actions/workflows/pkgdown.yaml)
+
+Current release: **0.8.7**
 
 `bwTools` provides native-R tools for BigWig, WIG, and bedGraph genomic signal
 tracks. It supports BigWig binary reading and writing, indexed regional
@@ -30,7 +25,16 @@ code, or UCSC executables at runtime.
 
 ## Installation
 
-During package development:
+Install the development release from GitHub:
+
+```{r}
+install.packages("pak")
+pak::pak("Renscq/bwTools")
+```
+
+Package website: <https://renscq.github.io/bwTools/>
+
+For package development and local validation:
 
 ```{r}
 devtools::document()
@@ -174,12 +178,12 @@ The user workflow is split into focused articles:
 
 | Article | Scope |
 | --- | --- |
-| [Getting started](vignettes/getting-started.Rmd) | End-to-end workflow and `BwgTrack` basics |
-| [Reading and writing](vignettes/reading-writing.Rmd) | BigWig/WIG/bedGraph I/O and manifests |
-| [Retrieval and statistics](vignettes/retrieve-stats.Rmd) | Regions, boundaries, exact and zoom statistics |
-| [Merge and multi-sample workflows](vignettes/merge-multisample.Rmd) | Sample identity, strands, aggregation |
-| [File formats and coordinates](vignettes/file-formats.Rmd) | Format detection and coordinate conventions |
-| [Performance and compatibility](vignettes/performance-compatibility.Rmd) | Benchmarking and external validation |
+| [Getting started](https://renscq.github.io/bwTools/articles/getting-started.html) | End-to-end workflow and `BwgTrack` basics |
+| [Reading and writing](https://renscq.github.io/bwTools/articles/reading-writing.html) | BigWig/WIG/bedGraph I/O and manifests |
+| [Retrieval and statistics](https://renscq.github.io/bwTools/articles/retrieve-stats.html) | Regions, boundaries, exact and zoom statistics |
+| [Merge and multi-sample workflows](https://renscq.github.io/bwTools/articles/merge-multisample.html) | Sample identity, strands, aggregation |
+| [File formats and coordinates](https://renscq.github.io/bwTools/articles/file-formats.html) | Format detection and coordinate conventions |
+| [Performance and compatibility](https://renscq.github.io/bwTools/articles/performance-compatibility.html) | Benchmarking and external validation |
 
 ## Public API
 
@@ -218,7 +222,7 @@ tryCatch(
 ## Performance diagnostics
 
 `benchmark_bwg()` is a development and profiling utility rather than a routine
-analysis step. See [Performance and compatibility](vignettes/performance-compatibility.Rmd)
+analysis step. See [Performance and compatibility](https://renscq.github.io/bwTools/articles/performance-compatibility.html)
 for reader, statistics, and writer profiling examples.
 
 ## External compatibility validation

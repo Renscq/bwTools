@@ -11,6 +11,15 @@ benchmarking BigWig, WIG, and bedGraph signal tracks. Public analysis
 functions operate on the standardized BwgTrack schema v2 and use 1-based
 closed coordinates.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/Renscq/bwTools}
+  \item \url{https://renscq.github.io/bwTools/}
+  \item Report bugs at \url{https://github.com/Renscq/bwTools/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Rensc \email{rensc0718@163.com}
 

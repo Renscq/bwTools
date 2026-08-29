@@ -1,10 +1,19 @@
+url: https://renscq.github.io/bwTools/
+
 template:
   bootstrap: 5
+
+repo:
+  url:
+    home: https://github.com/Renscq/bwTools/
+    source: https://github.com/Renscq/bwTools/blob/main/
+    issue: https://github.com/Renscq/bwTools/issues/
+    user: https://github.com/
 
 navbar:
   structure:
     left: [reference, articles, news]
-    right: [search]
+    right: [search, github]
 
 reference:
 - title: File I/O

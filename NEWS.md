@@ -1,3 +1,26 @@
+# bwTools 0.8.7
+
+## Release-quality checks and GitHub pkgdown deployment
+
+- Added GitHub Actions workflows for cross-platform `R CMD check` and automatic
+  pkgdown site deployment from `main`/`master` to the `gh-pages` branch.
+- Based the workflows on the current `r-lib/actions` v2 examples, including
+  current R setup, dependency installation, and pkgdown site build commands.
+- Added repository and website metadata to DESCRIPTION and `_pkgdown.yml` for
+  `Renscq/bwTools` and the GitHub Pages site.
+- Added a repository-level `tools/check-repository.001.R` contract checker for
+  GitHub workflows, pkgdown configuration, README synchronization, code fences,
+  and release-only `.Rbuildignore` rules.
+- Moved repository-only documentation assertions out of package testthat logic:
+  installed tests now validate `README.md` and shipped vignettes only, avoiding
+  failures caused by intentionally Rbuildignored pkgdown/GitHub source files.
+- Excluded `DEVELOPMENT.md`, `README.qmd`, and `tools/` from source-package
+  tarballs while retaining them in the Git repository.
+- Updated README with GitHub installation, CI/pkgdown badges, published article
+  links, and the package website URL.
+- Kept all 15 public signatures, BwgTrack schema v2, and production R function
+  bodies unchanged.
+
 # bwTools 0.8.6
 
 ## Documentation and user workflow consolidation

@@ -1,7 +1,7 @@
 Package: bwTools
 Type: Package
 Title: Native R Tools for BigWig, WIG, and bedGraph Files
-Version: 0.8.6
+Version: 0.8.7
 Authors@R: person("Rensc", role = c("aut", "cre"), email = "rensc0718@163.com")
 Description: Provides native R tools for reading and writing local BigWig,
     WIG, and bedGraph signal tracks, indexed genomic retrieval, exact and
@@ -12,6 +12,8 @@ Description: Provides native R tools for reading and writing local BigWig,
     in-memory signal coordinates are 1-based closed and are represented through
     the standardized BwgTrack schema v2.
 License: GPL-3
+URL: https://github.com/Renscq/bwTools, https://renscq.github.io/bwTools/
+BugReports: https://github.com/Renscq/bwTools/issues
 Encoding: UTF-8
 Depends: R (>= 4.2.0)
 Imports: data.table
@@ -21,6 +23,7 @@ Suggests:
     rmarkdown
 VignetteBuilder: knitr
 Config/testthat/edition: 3
+Config/Needs/website: pkgdown
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 NeedsCompilation: no
