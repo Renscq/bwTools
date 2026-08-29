@@ -1,5 +1,19 @@
 # Changelog
 
+## bwTools 0.8.10
+
+- Fix pkgdown homepage code rendering by treating `README.qmd` as the
+  only authoring source and rendering `README.md` before site
+  construction.
+- Keep executable R chunks in Quarto/knitr `{r}` form while using
+  `{.text}` attributes for non-executable text blocks in the QMD source.
+- Update GitHub workflows so Quarto renders `README.qmd` before
+  repository validation and pkgdown generation.
+- Update repository validation to distinguish QMD source fences from
+  rendered Markdown fences and reject unrendered Quarto chunk syntax in
+  `README.md`.
+- No public API, schema, numerical algorithm, or binary I/O changes.
+
 ## bwTools 0.8.9
 
 ### R CMD check portability fixes

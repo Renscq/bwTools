@@ -1,17 +1,26 @@
 # bwTools development status
 
-Current development release: **0.8.9**
+Current development release: **0.8.10**
 
-0.8.9 fixes R CMD check portability after GitHub CI exposed tests that
-still assumed a source-tree working directory. Installed-package tests
-now resolve installed assets explicitly, while source-only contracts run
-through the repository checker. The release also clears the current
-codetools NOTE without changing the 15-function public API, BwgTrack
-schema v2, or numerical algorithms.
+0.8.10 fixes pkgdown homepage code rendering by restoring the correct
+README.qmd -\> README.md render step before site construction. The QMD
+remains the only hand-edited README source, while the generated Markdown
+is consumed by pkgdown and GitHub. The release preserves the 15-function
+public API, BwgTrack schema v2, and all numerical and binary I/O
+algorithms.
 
 ------------------------------------------------------------------------
 
 # bwTools development roadmap
+
+## 0.8.10 pkgdown README rendering fix
+
+- Keep `README.qmd` as the only hand-edited README source.
+- Render `README.md` with Quarto before pkgdown builds the homepage.
+- Keep `{r}` for executable R chunks and `{.text}` for non-executable
+  text blocks in QMD source files.
+- Reject residual Quarto chunk openers in the rendered `README.md`.
+- Preserve all production R code from 0.8.9 unchanged.
 
 ## 0.8.9 R CMD check portability fix
 

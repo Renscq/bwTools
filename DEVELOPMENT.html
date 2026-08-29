@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">bwTools</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.9</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -44,11 +44,19 @@
 
 <div id="bwtools-development-status" class="section level1">
 
-<p>Current development release: <strong>0.8.9</strong></p>
-<p>0.8.9 fixes R CMD check portability after GitHub CI exposed tests that still assumed a source-tree working directory. Installed-package tests now resolve installed assets explicitly, while source-only contracts run through the repository checker. The release also clears the current codetools NOTE without changing the 15-function public API, BwgTrack schema v2, or numerical algorithms.</p>
+<p>Current development release: <strong>0.8.10</strong></p>
+<p>0.8.10 fixes pkgdown homepage code rendering by restoring the correct README.qmd -&gt; README.md render step before site construction. The QMD remains the only hand-edited README source, while the generated Markdown is consumed by pkgdown and GitHub. The release preserves the 15-function public API, BwgTrack schema v2, and all numerical and binary I/O algorithms.</p>
 <hr></div>
 <div class="section level1">
 <h1 id="bwtools-development-roadmap">bwTools development roadmap<a class="anchor" aria-label="anchor" href="#bwtools-development-roadmap"></a></h1>
+<div class="section level2">
+<h2 id="id_0810-pkgdown-readme-rendering-fix">0.8.10 pkgdown README rendering fix<a class="anchor" aria-label="anchor" href="#id_0810-pkgdown-readme-rendering-fix"></a></h2>
+<ul><li>Keep <code>README.qmd</code> as the only hand-edited README source.</li>
+<li>Render <code>README.md</code> with Quarto before pkgdown builds the homepage.</li>
+<li>Keep <code>{r}</code> for executable R chunks and <code>{.text}</code> for non-executable text blocks in QMD source files.</li>
+<li>Reject residual Quarto chunk openers in the rendered <code>README.md</code>.</li>
+<li>Preserve all production R code from 0.8.9 unchanged.</li>
+</ul></div>
 <div class="section level2">
 <h2 id="id_089-r-cmd-check-portability-fix">0.8.9 R CMD check portability fix<a class="anchor" aria-label="anchor" href="#id_089-r-cmd-check-portability-fix"></a></h2>
 <ul><li>Make testthat assertions operate on the installed package layout used by <code>R CMD check</code>, rather than on <code>tests/testthat/../..</code>.</li>

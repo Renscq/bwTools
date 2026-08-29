@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">bwTools</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.9</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -60,8 +60,13 @@
   <main id="main" class="col-md-9"><div class="section level1">
 <div class="page-header"><h1 id="bwtools">bwTools<a class="anchor" aria-label="anchor" href="#bwtools"></a>
 </h1></div>
+<!-- README.md is generated from README.qmd. Do not edit README.md directly. -->
+</div>
+<div class="section level1">
+<h1 id="bwtools-1">bwTools<a class="anchor" aria-label="anchor" href="#bwtools-1"></a>
+</h1>
 <p><a href="https://github.com/Renscq/bwTools/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/Renscq/bwTools/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a> <a href="https://github.com/Renscq/bwTools/actions/workflows/pkgdown.yaml" class="external-link"><img src="https://github.com/Renscq/bwTools/actions/workflows/pkgdown.yaml/badge.svg" alt="pkgdown"></a></p>
-<p>Current release: <strong>0.8.9</strong></p>
+<p>Current release: <strong>0.8.10</strong></p>
 <p><code>bwTools</code> provides native-R tools for BigWig, WIG, and bedGraph genomic signal tracks. It supports BigWig binary reading and writing, indexed regional retrieval, exact and zoom-aware statistics, multi-track merging, format conversion, and performance diagnostics without requiring Rcpp, bundled C/C++ code, or UCSC executables at runtime.</p>
 <div class="section level2">
 <h2 id="key-features">Key features<a class="anchor" aria-label="anchor" href="#key-features"></a>
@@ -81,41 +86,76 @@
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
 <p>Install the development release from GitHub:</p>
-<p><code>{r} install.packages("pak") pak::pak("Renscq/bwTools")</code></p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"pak"</span><span class="op">)</span></span>
+<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"Renscq/bwTools"</span><span class="op">)</span></span></code></pre></div>
 <p>Package website: <a href="https://renscq.github.io/bwTools/" class="uri">https://renscq.github.io/bwTools/</a></p>
 <p>For package development and local validation:</p>
-<p><code>{r} devtools::document() devtools::test() devtools::check()</code></p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">document</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">test</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">check</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
 </h2>
 <p>The package ships a small BigWig example:</p>
-<p>```{r} library(bwTools)</p>
-<p>bw_file &lt;- system.file( “extdata”, “bwtools_example.bigwig”, package = “bwTools”, mustWork = TRUE )</p>
-<pre><code>
-Read it lazily:
-
-```{r}
-bw &lt;- read_bwg(
-  bw_file,
-  sample_ids = "example"
-)
-
-summary_bwg(bw)
-samples_bwg(bw)
-seqinfo_bwg(bw)</code></pre>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/Renscq/bwTools" class="external-link">bwTools</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">bw_file</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span>
+<span>  <span class="st">"extdata"</span>,</span>
+<span>  <span class="st">"bwtools_example.bigwig"</span>,</span>
+<span>  package <span class="op">=</span> <span class="st">"bwTools"</span>,</span>
+<span>  mustWork <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Read it lazily:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">bw</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/read_bwg.html">read_bwg</a></span><span class="op">(</span></span>
+<span>  <span class="va">bw_file</span>,</span>
+<span>  sample_ids <span class="op">=</span> <span class="st">"example"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="reference/summary_bwg.html">summary_bwg</a></span><span class="op">(</span><span class="va">bw</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/samples_bwg.html">samples_bwg</a></span><span class="op">(</span><span class="va">bw</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/seqinfo_bwg.html">seqinfo_bwg</a></span><span class="op">(</span><span class="va">bw</span><span class="op">)</span></span></code></pre></div>
 <p>Retrieve a genomic interval using public <strong>1-based closed</strong> coordinates:</p>
-<p><code>{r} signal &lt;- retrieve_bwg(   bw,   chrom = "chr1",   start = 500L,   end = 1600L )</code></p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">signal</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/retrieve_bwg.html">retrieve_bwg</a></span><span class="op">(</span></span>
+<span>  <span class="va">bw</span>,</span>
+<span>  chrom <span class="op">=</span> <span class="st">"chr1"</span>,</span>
+<span>  start <span class="op">=</span> <span class="fl">500L</span>,</span>
+<span>  end <span class="op">=</span> <span class="fl">1600L</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 <p>Calculate exact statistics:</p>
-<p><code>{r} stats &lt;- stats_bwg(   bw,   chrom = "chr1",   start = 1L,   end = 10000L,   n_bins = 10L,   stat = "mean",   use_zoom = FALSE )</code></p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">stats</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/stats_bwg.html">stats_bwg</a></span><span class="op">(</span></span>
+<span>  <span class="va">bw</span>,</span>
+<span>  chrom <span class="op">=</span> <span class="st">"chr1"</span>,</span>
+<span>  start <span class="op">=</span> <span class="fl">1L</span>,</span>
+<span>  end <span class="op">=</span> <span class="fl">10000L</span>,</span>
+<span>  n_bins <span class="op">=</span> <span class="fl">10L</span>,</span>
+<span>  stat <span class="op">=</span> <span class="st">"mean"</span>,</span>
+<span>  use_zoom <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 <p>Create a writable regional track and persist it:</p>
-<p>```{r} region_track &lt;- retrieve_bwg( bw, chrom = “chr1”, start = 1L, end = 10000L, result = “track” )</p>
-<p>manifest &lt;- write_bwg( region_track, outdir = “bwtools-output”, format = “bigwig”, overwrite = TRUE )</p>
-<pre><code>
-The standard data flow is:
-
-```{text}
-file
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">region_track</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/retrieve_bwg.html">retrieve_bwg</a></span><span class="op">(</span></span>
+<span>  <span class="va">bw</span>,</span>
+<span>  chrom <span class="op">=</span> <span class="st">"chr1"</span>,</span>
+<span>  start <span class="op">=</span> <span class="fl">1L</span>,</span>
+<span>  end <span class="op">=</span> <span class="fl">10000L</span>,</span>
+<span>  result <span class="op">=</span> <span class="st">"track"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">manifest</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/write_bwg.html">write_bwg</a></span><span class="op">(</span></span>
+<span>  <span class="va">region_track</span>,</span>
+<span>  outdir <span class="op">=</span> <span class="st">"bwtools-output"</span>,</span>
+<span>  format <span class="op">=</span> <span class="st">"bigwig"</span>,</span>
+<span>  overwrite <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>The standard data flow is:</p>
+<pre class="text"><code>file
   ↓
 read_bwg()
   ↓
@@ -130,65 +170,155 @@ write_bwg()</code></pre>
 </h2>
 <p>Public in-memory coordinates are always <strong>1-based closed</strong>. BigWig and bedGraph coordinates on disk are <strong>0-based half-open</strong>; bwTools handles the conversion at the file boundary.</p>
 <p>A <code>BwgTrack</code> contains:</p>
-<p><code>{text} BwgTrack ├── samples ├── data ├── seqinfo └── meta</code></p>
+<pre class="text"><code>BwgTrack
+├── samples
+├── data
+├── seqinfo
+└── meta</code></pre>
 <p>Use <code><a href="reference/bwg_track.html">bwg_track()</a></code> to construct a track explicitly, <code><a href="reference/validate_bwg.html">validate_bwg()</a></code> to validate the public contract, and <code><a href="reference/is_bwg_track.html">is_bwg_track()</a></code> for a logical contract check. Access metadata through <code><a href="reference/samples_bwg.html">samples_bwg()</a></code>, <code><a href="reference/seqinfo_bwg.html">seqinfo_bwg()</a></code>, <code><a href="reference/metadata_bwg.html">metadata_bwg()</a></code>, and <code><a href="reference/zoominfo_bwg.html">zoominfo_bwg()</a></code> rather than relying on private implementation details.</p>
 </div>
 <div class="section level2">
 <h2 id="multiple-samples-and-strands">Multiple samples and strands<a class="anchor" aria-label="anchor" href="#multiple-samples-and-strands"></a>
 </h2>
 <p><code><a href="reference/read_bwg.html">read_bwg()</a></code> accepts multiple files with explicit sample IDs and strand labels:</p>
-<p>```{r} bedgraph_file &lt;- system.file( “extdata”, “bwtools_example.bedGraph”, package = “bwTools”, mustWork = TRUE )</p>
-<p>mixed &lt;- read_bwg( c(bw_file, bedgraph_file), sample_ids = c(“rna_plus”, “rna_minus”), strand = c(“+”, “-”) )</p>
-<pre><code>
-BigWig-only multi-file input remains lazy. Mixing BigWig with WIG or bedGraph
-uses memory mode. In-memory mixed-strand tracks are filtered from row-level
-`data$strand`; lazy BigWig tracks use file-level strand metadata.
-
-## Documentation
-
-The user workflow is split into focused articles:
-
-| Article | Scope |
-| --- | --- |
-| [Getting started](https://renscq.github.io/bwTools/articles/getting-started.html) | End-to-end workflow and `BwgTrack` basics |
-| [Reading and writing](https://renscq.github.io/bwTools/articles/reading-writing.html) | BigWig/WIG/bedGraph I/O and manifests |
-| [Retrieval and statistics](https://renscq.github.io/bwTools/articles/retrieve-stats.html) | Regions, boundaries, exact and zoom statistics |
-| [Merge and multi-sample workflows](https://renscq.github.io/bwTools/articles/merge-multisample.html) | Sample identity, strands, aggregation |
-| [File formats and coordinates](https://renscq.github.io/bwTools/articles/file-formats.html) | Format detection and coordinate conventions |
-| [Performance and compatibility](https://renscq.github.io/bwTools/articles/performance-compatibility.html) | Benchmarking and external validation |
-
-## Public API
-
-| Function | Responsibility |
-| --- | --- |
-| `detect_bwg_format()` | Detect BigWig, WIG, or bedGraph |
-| `read_bwg()` | Read one or more signal files |
-| `bwg_track()` | Construct a standardized track |
-| `validate_bwg()` | Validate the public object contract |
-| `is_bwg_track()` | Test the object contract |
-| `samples_bwg()` | Access sample metadata |
-| `seqinfo_bwg()` | Access chromosome metadata |
-| `metadata_bwg()` | Access object metadata |
-| `zoominfo_bwg()` | Access stored BigWig zoom metadata |
-| `retrieve_bwg()` | Retrieve one or more genomic regions |
-| `merge_bwg()` | Merge or aggregate tracks |
-| `stats_bwg()` | Calculate interval statistics |
-| `summary_bwg()` | Summarize a track |
-| `write_bwg()` | Write BigWig, WIG, or bedGraph |
-| `benchmark_bwg()` | Profile large BigWig workflows |
-
-The 15-function public API and BwgTrack schema v2 are regression-tested.
-
-## Errors
-
-Intentional user-facing errors inherit from `bwTools_error`, allowing downstream
-packages to catch package errors without matching English text:
-
-```{r}
-tryCatch(
-  retrieve_bwg(bw, "chr1", 0L, 100L),
-  bwTools_error = function(e) conditionMessage(e)
-)</code></pre>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">bedgraph_file</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span>
+<span>  <span class="st">"extdata"</span>,</span>
+<span>  <span class="st">"bwtools_example.bedGraph"</span>,</span>
+<span>  package <span class="op">=</span> <span class="st">"bwTools"</span>,</span>
+<span>  mustWork <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">mixed</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/read_bwg.html">read_bwg</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">bw_file</span>, <span class="va">bedgraph_file</span><span class="op">)</span>,</span>
+<span>  sample_ids <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"rna_plus"</span>, <span class="st">"rna_minus"</span><span class="op">)</span>,</span>
+<span>  strand <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"+"</span>, <span class="st">"-"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>BigWig-only multi-file input remains lazy. Mixing BigWig with WIG or bedGraph uses memory mode. In-memory mixed-strand tracks are filtered from row-level <code>data$strand</code>; lazy BigWig tracks use file-level strand metadata.</p>
+</div>
+<div class="section level2">
+<h2 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a>
+</h2>
+<p>The user workflow is split into focused articles:</p>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr>
+<th>Article</th>
+<th>Scope</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><a href="https://renscq.github.io/bwTools/articles/getting-started.html">Getting started</a></td>
+<td>End-to-end workflow and <code>BwgTrack</code> basics</td>
+</tr>
+<tr>
+<td><a href="https://renscq.github.io/bwTools/articles/reading-writing.html">Reading and writing</a></td>
+<td>BigWig/WIG/bedGraph I/O and manifests</td>
+</tr>
+<tr>
+<td><a href="https://renscq.github.io/bwTools/articles/retrieve-stats.html">Retrieval and statistics</a></td>
+<td>Regions, boundaries, exact and zoom statistics</td>
+</tr>
+<tr>
+<td><a href="https://renscq.github.io/bwTools/articles/merge-multisample.html">Merge and multi-sample workflows</a></td>
+<td>Sample identity, strands, aggregation</td>
+</tr>
+<tr>
+<td><a href="https://renscq.github.io/bwTools/articles/file-formats.html">File formats and coordinates</a></td>
+<td>Format detection and coordinate conventions</td>
+</tr>
+<tr>
+<td><a href="https://renscq.github.io/bwTools/articles/performance-compatibility.html">Performance and compatibility</a></td>
+<td>Benchmarking and external validation</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section level2">
+<h2 id="public-api">Public API<a class="anchor" aria-label="anchor" href="#public-api"></a>
+</h2>
+<table class="table">
+<thead><tr>
+<th>Function</th>
+<th>Responsibility</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code><a href="reference/detect_bwg_format.html">detect_bwg_format()</a></code></td>
+<td>Detect BigWig, WIG, or bedGraph</td>
+</tr>
+<tr>
+<td><code><a href="reference/read_bwg.html">read_bwg()</a></code></td>
+<td>Read one or more signal files</td>
+</tr>
+<tr>
+<td><code><a href="reference/bwg_track.html">bwg_track()</a></code></td>
+<td>Construct a standardized track</td>
+</tr>
+<tr>
+<td><code><a href="reference/validate_bwg.html">validate_bwg()</a></code></td>
+<td>Validate the public object contract</td>
+</tr>
+<tr>
+<td><code><a href="reference/is_bwg_track.html">is_bwg_track()</a></code></td>
+<td>Test the object contract</td>
+</tr>
+<tr>
+<td><code><a href="reference/samples_bwg.html">samples_bwg()</a></code></td>
+<td>Access sample metadata</td>
+</tr>
+<tr>
+<td><code><a href="reference/seqinfo_bwg.html">seqinfo_bwg()</a></code></td>
+<td>Access chromosome metadata</td>
+</tr>
+<tr>
+<td><code><a href="reference/metadata_bwg.html">metadata_bwg()</a></code></td>
+<td>Access object metadata</td>
+</tr>
+<tr>
+<td><code><a href="reference/zoominfo_bwg.html">zoominfo_bwg()</a></code></td>
+<td>Access stored BigWig zoom metadata</td>
+</tr>
+<tr>
+<td><code><a href="reference/retrieve_bwg.html">retrieve_bwg()</a></code></td>
+<td>Retrieve one or more genomic regions</td>
+</tr>
+<tr>
+<td><code><a href="reference/merge_bwg.html">merge_bwg()</a></code></td>
+<td>Merge or aggregate tracks</td>
+</tr>
+<tr>
+<td><code><a href="reference/stats_bwg.html">stats_bwg()</a></code></td>
+<td>Calculate interval statistics</td>
+</tr>
+<tr>
+<td><code><a href="reference/summary_bwg.html">summary_bwg()</a></code></td>
+<td>Summarize a track</td>
+</tr>
+<tr>
+<td><code><a href="reference/write_bwg.html">write_bwg()</a></code></td>
+<td>Write BigWig, WIG, or bedGraph</td>
+</tr>
+<tr>
+<td><code><a href="reference/benchmark_bwg.html">benchmark_bwg()</a></code></td>
+<td>Profile large BigWig workflows</td>
+</tr>
+</tbody>
+</table>
+<p>The 15-function public API and BwgTrack schema v2 are regression-tested.</p>
+</div>
+<div class="section level2">
+<h2 id="errors">Errors<a class="anchor" aria-label="anchor" href="#errors"></a>
+</h2>
+<p>Intentional user-facing errors inherit from <code>bwTools_error</code>, allowing downstream packages to catch package errors without matching English text:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="reference/retrieve_bwg.html">retrieve_bwg</a></span><span class="op">(</span><span class="va">bw</span>, <span class="st">"chr1"</span>, <span class="fl">0L</span>, <span class="fl">100L</span><span class="op">)</span>,</span>
+<span>  bwTools_error <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">e</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">conditionMessage</a></span><span class="op">(</span><span class="va">e</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="performance-diagnostics">Performance diagnostics<a class="anchor" aria-label="anchor" href="#performance-diagnostics"></a>
@@ -201,6 +331,7 @@ tryCatch(
 <p>Optional bidirectional BigWig checks are installed under <code>inst/compatibility/</code>. They can use pyBigWig/libBigWig, rtracklayer, and UCSC utilities when those tools are available, but none is a bwTools runtime dependency.</p>
 </div>
 </div>
+
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">bwTools</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.9</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.10</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,14 @@
       <small>Source: <a href="https://github.com/Renscq/bwTools/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.8.10" id="bwtools-0810">bwTools 0.8.10<a class="anchor" aria-label="anchor" href="#bwtools-0810"></a></h2>
+<ul><li>Fix pkgdown homepage code rendering by treating <code>README.qmd</code> as the only authoring source and rendering <code>README.md</code> before site construction.</li>
+<li>Keep executable R chunks in Quarto/knitr <code>{r}</code> form while using <code>{.text}</code> attributes for non-executable text blocks in the QMD source.</li>
+<li>Update GitHub workflows so Quarto renders <code>README.qmd</code> before repository validation and pkgdown generation.</li>
+<li>Update repository validation to distinguish QMD source fences from rendered Markdown fences and reject unrendered Quarto chunk syntax in <code>README.md</code>.</li>
+<li>No public API, schema, numerical algorithm, or binary I/O changes.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.8.9" id="bwtools-089">bwTools 0.8.9<a class="anchor" aria-label="anchor" href="#bwtools-089"></a></h2>
 <div class="section level3">
