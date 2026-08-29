@@ -1,7 +1,7 @@
 # Author: Rensc
 # Date: 2026-08-29
-# Version: dev006
-# Function: Retrieve one or more genomic regions from BwgTrack-compatible objects
+# Version: dev007
+# Function: Retrieve bounded genomic regions from BwgTrack-compatible objects
 # Input: BwgTrack and genomic region(s)
 # Output: In-memory signal data.table or BwgTrack subset
 
@@ -245,7 +245,13 @@ bw_retrieve_seqinfo <- function(object, sample_ids, regions) {
 #' Retrieves one or more genomic regions from a standardized `BwgTrack`.
 #' Query coordinates are 1-based closed. Overlapping or directly adjacent
 #' regions are merged before retrieval, and signal intervals crossing query
-#' boundaries are clipped without rebasing genomic coordinates.
+#' boundaries are clipped without rebasing genomic coordinates. When complete
+#' chromosome lengths are available in `seqinfo`, query ends beyond a chromosome
+#' are clipped to the known length and queries starting beyond the chromosome
+#' return an empty result. Unknown chromosomes are rejected only for selected
+#' samples whose `seqinfo` lengths are all known; length-incomplete metadata
+#' remains permissive because it may describe only chromosomes observed in the
+#' signal.
 #'
 #' @param x A validated `BwgTrack` object.
 #' @param chrom Optional chromosome name for a single-region query.
@@ -283,16 +289,25 @@ retrieve_bwg <- function(
     sample_ids = sample_ids,
     strand = strand
   )
+  bounded_regions <- if (nrow(sample_tbl) < 1L) {
+    normalized_regions
+  } else {
+    bw_bound_query_regions(
+      x,
+      sample_ids = sample_tbl[["sample_id"]],
+      regions = normalized_regions
+    )
+  }
 
-  data <- if (nrow(sample_tbl) < 1L) {
+  data <- if (nrow(sample_tbl) < 1L || nrow(bounded_regions) < 1L) {
     bw_empty_signal(include_sample = TRUE)
   } else if (is.null(x$data)) {
-    bw_retrieve_lazy_regions(x, sample_tbl, normalized_regions)
+    bw_retrieve_lazy_regions(x, sample_tbl, bounded_regions)
   } else {
     bw_retrieve_memory_regions(
       x,
       sample_tbl[["sample_id"]],
-      normalized_regions
+      bounded_regions
     )
   }
 
@@ -303,12 +318,12 @@ retrieve_bwg <- function(
   seqinfo <- bw_retrieve_seqinfo(
     x,
     sample_tbl[["sample_id"]],
-    normalized_regions
+    bounded_regions
   )
   meta <- x$meta
   meta$source_mode <- x$meta$mode %||% if (is.null(x$data)) "lazy" else "memory"
   meta$retrieved <- TRUE
-  meta$retrieval_regions <- data.table::copy(normalized_regions)
+  meta$retrieval_regions <- data.table::copy(bounded_regions)
 
   bwg_track(
     samples = sample_tbl,

@@ -8,17 +8,17 @@ execute:
 
 # bwTools
 
-Current development release: **0.8.1**
+Current development release: **0.8.2**
 
 `bwTools` provides native-R reading, writing, indexed retrieval, merging,
 statistics, and performance diagnostics for BigWig, WIG, and bedGraph genomic
 signal tracks.
 
-Version 0.8.0 is the **API-stability release** before downstream integration.
-The BigWig reader, writer, zoom pyramid, indexed retrieval, and exact/zoom
-statistics established in 0.7.x are retained. This release standardizes public
-argument validation, error conditions, return schemas, cross-format behavior,
-and user-facing documentation.
+Version 0.8.0 is the **API-stability baseline** before downstream integration.
+The optimized BigWig reader, writer, zoom pyramid, indexed retrieval, and
+exact/zoom statistics established in 0.7.x are retained. Version 0.8.2 hardens
+chromosome boundaries, empty query behavior, and `data`/`seqinfo` consistency
+without changing the 15-function public API or BwgTrack schema v2.
 
 ## Design principles
 
@@ -275,6 +275,31 @@ BwgTrack
 write_bwg()
 ```
 
+### Query boundary behavior
+
+Query coordinates must be positive 1-based closed integers. When selected
+samples have complete known chromosome lengths in `seqinfo`, bwTools uses the
+following rules consistently in memory and lazy modes:
+
+```{text}
+unknown chromosome             -> error
+end beyond chromosome length   -> clip to chromosome length
+start beyond chromosome length -> empty typed result
+```
+
+For example, a query of `chr1:950-1050` on a chromosome of length 1000 is
+interpreted as `chr1:950-1000`. The effective bounded regions are stored in
+`metadata_bwg(retrieve_bwg(..., result = "track"))$retrieval_regions`.
+
+A sample is treated as having complete sequence metadata only when all of its
+`seqinfo$length` values are known. WIG and bedGraph do not encode chromosome
+lengths, so their automatically inferred `seqinfo` contains `length = NA`; a
+chromosome not observed in such incomplete metadata is treated as having no
+signal rather than automatically being rejected.
+
+Chromosome identifiers are never normalized by bwTools. Names such as `1`,
+`chr1`, `Chr01`, `I`, `MT`, and `scaffold_001` remain distinct.
+
 ## 5. Interval statistics
 
 Supported statistics:
@@ -327,6 +352,10 @@ resolution  zoom reduction level, or NA for full
 
 For final quantitative calculations where exact boundary behavior matters, use
 `use_zoom = FALSE`.
+
+When a known chromosome end truncates a query, clipping occurs before `n_bins`
+are constructed. Queries beginning entirely beyond a known chromosome return a
+typed zero-row statistics table with the normal output columns.
 
 ## 6. Merge signal tracks
 

@@ -1,13 +1,47 @@
 # bwTools development status
 
-Current development release: **0.8.1**
+Current development release: **0.8.2**
 
-0.8.1 is a test-only patch correcting two invalid benchmark boundary fixtures.
-The 0.8.0 production API and implementation are unchanged.
+0.8.2 is the boundary and edge-case hardening release. It keeps the 0.8.0
+public API stability baseline and 0.7.5 binary I/O performance paths while
+standardizing genomic query bounds, empty-result schemas, and data/seqinfo
+coordinate consistency.
 
 ---
 
 # bwTools development roadmap
+
+## 0.8.x - API and boundary hardening
+
+Status: **0.8.2 implemented; local R verification required.**
+
+Scope:
+
+- Keep the 0.8.0 public API and BwgTrack schema v2 stable.
+- Apply known chromosome bounds consistently to memory and lazy queries.
+- Reject unknown chromosomes only when selected samples provide complete
+  known-length sequence metadata.
+- Treat any sample with unknown sequence lengths as incomplete rather than as a
+  full genome dictionary.
+- Keep empty retrieval and statistics results structurally stable.
+- Validate `data` against supplied sample/chromosome `seqinfo` and known lengths.
+- Preserve chromosome identifiers exactly; never add or remove `chr` prefixes.
+- Keep the public in-memory coordinate range within R's signed integer range.
+
+Acceptance criteria:
+
+- Memory and lazy BigWig statistics use the same effective interval at known
+  chromosome ends.
+- Queries beginning beyond a known chromosome return typed empty results rather
+  than mode-specific structures.
+- Invalid coordinates, unknown complete-reference chromosomes, non-finite
+  signal values, and data/seqinfo mismatches raise `bwTools_error`.
+- Zero and negative finite signal values round-trip through native BigWig.
+- Chromosome names are preserved byte-for-byte at the R character level across
+  BigWig, WIG, and bedGraph round trips.
+- Existing public function signatures and schema-v2 core field types do not
+  change.
+
 
 ## Design contract
 

@@ -13,7 +13,9 @@ columns are normalized automatically.}
 \item{data}{Optional in-memory signal table using 1-based closed coordinates.}
 
 \item{seqinfo}{Optional chromosome metadata table containing \code{chrom} and
-\code{length}. When \code{sample_id} is absent, rows are replicated across samples.}
+\code{length}. When \code{sample_id} is absent, rows are replicated across samples.
+When supplied, every signal sample/chromosome pair must be represented and
+signal intervals may not exceed a known chromosome length.}
 
 \item{meta}{Optional metadata list.}
 }

@@ -1,6 +1,6 @@
 # bwTools public API contract
 
-Version: **schema 2 / bwTools 0.8.0**
+Version: **schema 2 / bwTools 0.8.2**
 
 Version 0.8.0 is the downstream-integration stability baseline. Packages such
 as GeneTrackR should depend on the public functions and schemas documented here
@@ -114,6 +114,9 @@ sample_id  chrom  start  end  value  strand
 sample_id  chrom  start  end  stat  value  covered_bases  source  resolution
 ```
 
+Fully out-of-range `retrieve_bwg()` and `stats_bwg()` calls retain these core
+columns with zero rows rather than returning a zero-column data.table.
+
 `zoominfo_bwg()` core columns:
 
 ```{text}
@@ -176,6 +179,36 @@ BigWig and bedGraph on disk:
 All file readers and writers perform the conversion at the I/O boundary. Query
 coordinates passed to `retrieve_bwg()` and `stats_bwg()` are always 1-based
 closed positive integer coordinates.
+
+The schema-v2 in-memory coordinate fields `start`, `end`, and known `length`
+values remain R integer columns and therefore support coordinates through
+`.Machine$integer.max`. BigWig chromosome lengths larger than that can be parsed
+internally from the file but are represented as `NA` in public `seqinfo`, and
+full-resolution coordinates beyond the R integer range are not materialized.
+
+When selected samples provide known chromosome lengths in `seqinfo`:
+
+```{text}
+unknown chromosome             -> bwTools_error
+end beyond chromosome length   -> clip to chromosome length
+start beyond chromosome length -> typed empty result
+conflicting known chromosome lengths -> bwTools_error
+```
+
+`stats_bwg()` applies chromosome-end clipping before bin construction, so memory
+and lazy BigWig modes use the same effective interval. If the clipped interval
+contains fewer bases than `n_bins`, normal bin-count validation raises an error.
+
+A selected sample is considered to have complete sequence metadata only when
+all of its `seqinfo$length` values are known. WIG and bedGraph inputs do not
+carry chromosome lengths. Their automatically constructed `seqinfo` rows
+therefore use `length = NA`; absence of another chromosome from such incomplete
+metadata is interpreted as no observed signal rather than proof that the
+chromosome is invalid.
+
+If `seqinfo` is supplied for a memory-mode track, every signal
+sample/chromosome pair must occur in `seqinfo`, and signal ends may not exceed a
+known chromosome length.
 
 ## Merge contract
 

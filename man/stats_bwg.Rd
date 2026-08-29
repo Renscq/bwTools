@@ -42,5 +42,9 @@ Calculates coverage-aware statistics over equal-width genomic bins from a
 standardized \code{BwgTrack}. Memory-mode tracks use full-resolution signal.
 Lazy BigWig tracks may use stored zoom summaries when \code{use_zoom = TRUE}.
 Exact lazy-BigWig calculations stream overlapping full-resolution blocks
-directly into bin accumulators without materializing an interval table.
+directly into bin accumulators without materializing an interval table. When
+all chromosome lengths for a selected sample are known in \code{seqinfo}, query ends
+are clipped to the known chromosome length and unknown chromosomes are
+rejected. Queries starting beyond a known chromosome return a stable empty
+statistics table.
 }

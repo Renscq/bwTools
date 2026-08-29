@@ -1,3 +1,28 @@
+# bwTools 0.8.2
+
+## Boundary and edge-case hardening
+
+- Unified public genomic query bounds across memory and lazy BigWig tracks when
+  chromosome lengths are known in `seqinfo`.
+- `retrieve_bwg()` now clips query ends to known chromosome lengths, returns a
+  stable empty signal table when a query starts beyond the chromosome, and
+  records the effective bounded regions in `result = "track"` metadata.
+- `stats_bwg()` now applies the same chromosome-end clipping before bin
+  construction and returns a typed empty statistics table for fully out-of-range
+  queries.
+- Unknown chromosomes now raise `bwTools_error` when selected samples provide
+  complete known-length sequence metadata; samples with any unknown sequence
+  length remain permissive because their metadata may be incomplete.
+- Strengthened `BwgTrack` validation so in-memory signal sample/chromosome pairs
+  must exist in supplied `seqinfo`, and known chromosome lengths cannot be
+  exceeded by signal intervals.
+- Added regression coverage for point queries, invalid/fractional/out-of-range
+  coordinates, empty signal tracks, signed finite values, float32 writer limits,
+  exact chromosome-name preservation, region-union normalization, and the R
+  integer coordinate boundary.
+- Kept BwgTrack schema v2, all 15 public function signatures, native BigWig
+  binary reader/writer layout, and optimized 0.7.x performance paths unchanged.
+
 # bwTools 0.8.1
 
 ## Tests

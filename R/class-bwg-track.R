@@ -1,6 +1,6 @@
 # Author: Rensc
-# Date: 2026-08-28
-# Version: dev004
+# Date: 2026-08-29
+# Version: dev005
 # Function: Define and access the standardized BwgTrack object contract
 # Input: Sample metadata, signal data, sequence metadata, and package metadata
 # Output: Standardized BwgTrack-compatible S3 object
@@ -168,6 +168,8 @@ bw_normalize_seqinfo_table <- function(seqinfo, sample_ids) {
 #' @param data Optional in-memory signal table using 1-based closed coordinates.
 #' @param seqinfo Optional chromosome metadata table containing `chrom` and
 #'   `length`. When `sample_id` is absent, rows are replicated across samples.
+#'   When supplied, every signal sample/chromosome pair must be represented and
+#'   signal intervals may not exceed a known chromosome length.
 #' @param meta Optional metadata list.
 #' @return A validated object inheriting from `BwgTrack` and `bwToolsTrack`.
 #' @export

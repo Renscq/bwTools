@@ -42,5 +42,11 @@ A signal data.table or memory-mode \code{BwgTrack}.
 Retrieves one or more genomic regions from a standardized \code{BwgTrack}.
 Query coordinates are 1-based closed. Overlapping or directly adjacent
 regions are merged before retrieval, and signal intervals crossing query
-boundaries are clipped without rebasing genomic coordinates.
+boundaries are clipped without rebasing genomic coordinates. When complete
+chromosome lengths are available in \code{seqinfo}, query ends beyond a chromosome
+are clipped to the known length and queries starting beyond the chromosome
+return an empty result. Unknown chromosomes are rejected only for selected
+samples whose \code{seqinfo} lengths are all known; length-incomplete metadata
+remains permissive because it may describe only chromosomes observed in the
+signal.
 }

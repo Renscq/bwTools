@@ -1,9 +1,9 @@
 # Author: Rensc
-# Date: 2026-08-28
-# Version: dev002
-# Function: Standardize validation and sample selection for public bwTools APIs
-# Input: BwgTrack-compatible objects and sample identifiers
-# Output: Validated objects, sample tables, or standardized errors
+# Date: 2026-08-29
+# Version: dev003
+# Function: Standardize validation, sample selection, and genomic query bounds
+# Input: BwgTrack-compatible objects, sample identifiers, and genomic intervals
+# Output: Validated objects, bounded queries, sample tables, or standardized errors
 
 bw_validate_flag <- function(x, name) {
   if (!is.logical(x) || length(x) != 1L || is.na(x)) {
@@ -71,6 +71,141 @@ bw_validate_genomic_interval <- function(chrom, start, end) {
     bw_stop("`end` must be greater than or equal to `start`.")
   }
   list(chrom = chrom, start = start_value, end = end_value)
+}
+
+bw_query_chrom_length <- function(x, sample_ids, chrom) {
+  if (is.null(x$seqinfo)) {
+    return(NA_integer_)
+  }
+
+  seqinfo <- data.table::as.data.table(x$seqinfo)
+  required <- c("sample_id", "chrom", "length")
+  if (nrow(seqinfo) < 1L || !all(required %in% names(seqinfo))) {
+    return(NA_integer_)
+  }
+
+  selected <- unique(as.character(sample_ids))
+  if (length(selected) < 1L) {
+    return(NA_integer_)
+  }
+  idx <- which(seqinfo[["sample_id"]] %in% selected)
+  info <- seqinfo[idx]
+  if (nrow(info) < 1L) {
+    return(NA_integer_)
+  }
+
+  length_value <- suppressWarnings(as.numeric(info[["length"]]))
+  info_samples <- unique(as.character(info[["sample_id"]]))
+  complete_samples <- info_samples[vapply(
+    info_samples,
+    function(sample_id) {
+      idx <- which(info[["sample_id"]] == sample_id)
+      length(idx) > 0L && all(!is.na(length_value[idx]))
+    },
+    logical(1L)
+  )]
+  if (length(complete_samples) > 0L) {
+    missing <- complete_samples[!vapply(
+      complete_samples,
+      function(sample_id) {
+        any(
+          info[["sample_id"]] == sample_id &
+            info[["chrom"]] == chrom
+        )
+      },
+      logical(1L)
+    )]
+    if (length(missing) > 0L) {
+      bw_stop(paste0(
+        "Chromosome `", chrom,
+        "` was not found in complete sequence metadata for selected sample(s): ",
+        paste(missing, collapse = ", "),
+        "."
+      ))
+    }
+  }
+
+  chrom_idx <- which(info[["chrom"]] == chrom & !is.na(length_value))
+  if (length(chrom_idx) < 1L) {
+    return(NA_integer_)
+  }
+  lengths <- unique(length_value[chrom_idx])
+  if (length(lengths) > 1L) {
+    bw_stop(paste0(
+      "Selected samples have conflicting chromosome lengths for `",
+      chrom,
+      "`."
+    ))
+  }
+  as.integer(lengths[[1L]])
+}
+
+bw_bound_query_interval <- function(x, sample_ids, chrom, start, end) {
+  chrom_length <- bw_query_chrom_length(x, sample_ids, chrom)
+  if (is.na(chrom_length)) {
+    return(list(
+      chrom = chrom,
+      start = start,
+      end = end,
+      chrom_length = NA_integer_,
+      empty = FALSE
+    ))
+  }
+  if (start > chrom_length) {
+    return(list(
+      chrom = chrom,
+      start = start,
+      end = end,
+      chrom_length = chrom_length,
+      empty = TRUE
+    ))
+  }
+  list(
+    chrom = chrom,
+    start = start,
+    end = min(end, chrom_length),
+    chrom_length = chrom_length,
+    empty = FALSE
+  )
+}
+
+bw_bound_query_regions <- function(x, sample_ids, regions) {
+  regions <- data.table::as.data.table(regions)
+  if (nrow(regions) < 1L) {
+    return(data.table::data.table(
+      chrom = character(),
+      start = integer(),
+      end = integer()
+    ))
+  }
+
+  out <- vector("list", nrow(regions))
+  out_n <- 0L
+  for (i in seq_len(nrow(regions))) {
+    bound <- bw_bound_query_interval(
+      x,
+      sample_ids = sample_ids,
+      chrom = regions[["chrom"]][i],
+      start = regions[["start"]][i],
+      end = regions[["end"]][i]
+    )
+    if (isTRUE(bound$empty)) next
+    out_n <- out_n + 1L
+    out[[out_n]] <- data.table::data.table(
+      chrom = bound$chrom,
+      start = as.integer(bound$start),
+      end = as.integer(bound$end)
+    )
+  }
+
+  if (out_n < 1L) {
+    return(data.table::data.table(
+      chrom = character(),
+      start = integer(),
+      end = integer()
+    ))
+  }
+  data.table::rbindlist(out[seq_len(out_n)], use.names = TRUE)[]
 }
 
 bw_validate_sample_ids <- function(sample_ids, available = NULL, allow_null = TRUE) {
@@ -292,6 +427,96 @@ bw_contract_issues <- function(x) {
             issues <- c(issues, "`seqinfo` contains conflicting lengths for a sample/chromosome pair.")
             break
           }
+        }
+      }
+    }
+  }
+
+  if (
+    is.data.frame(x$data) && is.data.frame(x$seqinfo) &&
+      all(c("sample_id", "chrom", "end") %in% names(x$data)) &&
+      all(c("sample_id", "chrom", "length") %in% names(x$seqinfo)) &&
+      nrow(x$data) > 0L
+  ) {
+    signal <- data.table::as.data.table(x$data)
+    seqinfo <- data.table::as.data.table(x$seqinfo)
+    data_sample <- as.character(signal[["sample_id"]])
+    data_chrom <- as.character(signal[["chrom"]])
+    end_value <- suppressWarnings(as.numeric(signal[["end"]]))
+
+    valid_key <- !is.na(data_sample) & nzchar(data_sample) &
+      !is.na(data_chrom) & nzchar(data_chrom)
+    if (all(valid_key)) {
+      n_signal <- length(data_sample)
+      run_start <- if (n_signal == 1L) {
+        1L
+      } else {
+        which(c(
+          TRUE,
+          data_sample[-1L] != data_sample[-n_signal] |
+            data_chrom[-1L] != data_chrom[-n_signal]
+        ))
+      }
+      run_end <- c(run_start[-1L] - 1L, n_signal)
+      run_key <- paste(
+        data_sample[run_start],
+        data_chrom[run_start],
+        sep = "\r"
+      )
+      run_max_end <- vapply(
+        seq_along(run_start),
+        function(i) {
+          values <- end_value[run_start[i]:run_end[i]]
+          values <- values[is.finite(values)]
+          if (length(values) < 1L) NA_real_ else max(values)
+        },
+        numeric(1L)
+      )
+
+      data_keys <- unique(run_key)
+      data_max_end <- vapply(
+        data_keys,
+        function(key) {
+          values <- run_max_end[run_key == key]
+          values <- values[is.finite(values)]
+          if (length(values) < 1L) NA_real_ else max(values)
+        },
+        numeric(1L)
+      )
+
+      seq_sample <- as.character(seqinfo[["sample_id"]])
+      seq_chrom <- as.character(seqinfo[["chrom"]])
+      seq_length <- suppressWarnings(as.numeric(seqinfo[["length"]]))
+      valid_seq_key <- !is.na(seq_sample) & nzchar(seq_sample) &
+        !is.na(seq_chrom) & nzchar(seq_chrom)
+      seq_key <- paste(seq_sample, seq_chrom, sep = "\r")
+      seq_keys <- unique(seq_key[valid_seq_key])
+
+      missing_key <- data_keys[!data_keys %in% seq_keys]
+      if (length(missing_key) > 0L) {
+        labels <- sub("\r", "/", missing_key, fixed = TRUE)
+        issues <- c(
+          issues,
+          paste0(
+            "`data` contains sample/chromosome pairs absent from `seqinfo`: ",
+            paste(labels, collapse = ", "),
+            "."
+          )
+        )
+      }
+
+      known_idx <- valid_seq_key & !is.na(seq_length)
+      if (any(known_idx)) {
+        known_key <- seq_key[known_idx]
+        known_length <- seq_length[known_idx]
+        match_idx <- match(data_keys, known_key)
+        limit <- known_length[match_idx]
+        beyond <- !is.na(limit) & is.finite(data_max_end) & data_max_end > limit
+        if (any(beyond)) {
+          issues <- c(
+            issues,
+            "`data` contains intervals extending beyond `seqinfo` chromosome lengths."
+          )
         }
       }
     }

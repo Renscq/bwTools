@@ -1,9 +1,23 @@
 # Author: Rensc
 # Date: 2026-08-29
-# Version: dev005
-# Function: Calculate exact or zoom-accelerated BigWig interval statistics
+# Version: dev006
+# Function: Calculate bounded exact or zoom-accelerated interval statistics
 # Input: Validated BwgTrack object and genomic bins
 # Output: Per-bin signal statistics in 1-based closed coordinates
+
+bw_empty_stats <- function() {
+  data.table::data.table(
+    sample_id = character(),
+    chrom = character(),
+    start = integer(),
+    end = integer(),
+    stat = character(),
+    value = numeric(),
+    covered_bases = numeric(),
+    source = character(),
+    resolution = numeric()
+  )
+}
 
 bw_stat_bins <- function(start, end, n_bins) {
   start <- suppressWarnings(as.integer(start)[1L])
@@ -383,7 +397,11 @@ bw_stats_bigwig_file <- function(file, sample_id, chrom, start, end, n_bins, sta
 #' standardized `BwgTrack`. Memory-mode tracks use full-resolution signal.
 #' Lazy BigWig tracks may use stored zoom summaries when `use_zoom = TRUE`.
 #' Exact lazy-BigWig calculations stream overlapping full-resolution blocks
-#' directly into bin accumulators without materializing an interval table.
+#' directly into bin accumulators without materializing an interval table. When
+#' all chromosome lengths for a selected sample are known in `seqinfo`, query ends
+#' are clipped to the known chromosome length and unknown chromosomes are
+#' rejected. Queries starting beyond a known chromosome return a stable empty
+#' statistics table.
 #'
 #' @param x A validated `BwgTrack` object.
 #' @param chrom Chromosome name.
@@ -419,12 +437,25 @@ stats_bwg <- function(
   start <- interval$start
   end <- interval$end
   n_bins <- bw_validate_positive_integer(n_bins, "n_bins", minimum = 1L)
-  bw_stat_bins(start, end, n_bins)
 
   sample_tbl <- bw_select_samples(x, sample_ids = sample_ids)
   if (nrow(sample_tbl) < 1L) {
-    return(data.table::data.table())
+    return(bw_empty_stats())
   }
+
+  bounded <- bw_bound_query_interval(
+    x,
+    sample_ids = sample_tbl[["sample_id"]],
+    chrom = chrom,
+    start = start,
+    end = end
+  )
+  if (isTRUE(bounded$empty)) {
+    return(bw_empty_stats())
+  }
+  start <- as.integer(bounded$start)
+  end <- as.integer(bounded$end)
+  bw_stat_bins(start, end, n_bins)
 
   out <- vector("list", nrow(sample_tbl))
   out_n <- 0L
@@ -472,7 +503,7 @@ stats_bwg <- function(
     }
   }
   if (out_n < 1L) {
-    return(data.table::data.table())
+    return(bw_empty_stats())
   }
   data.table::rbindlist(out[seq_len(out_n)], use.names = TRUE, fill = TRUE)[]
 }
