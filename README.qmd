@@ -8,7 +8,7 @@ execute:
 
 # bwTools
 
-Current development release: **0.8.0**
+Current development release: **0.8.1**
 
 `bwTools` provides native-R reading, writing, indexed retrieval, merging,
 statistics, and performance diagnostics for BigWig, WIG, and bedGraph genomic

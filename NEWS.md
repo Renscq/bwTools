@@ -1,3 +1,14 @@
+# bwTools 0.8.1
+
+## Tests
+
+- Corrected the bounded full-stat benchmark regression so the 1000 bp case
+  runs below a 1500 bp limit while the 2000 bp case is skipped.
+- Corrected the writer size-limit regression to use a 1000 bp bundled-example
+  region with known signal coverage; the previous 100 bp centered region was
+  legitimately empty and therefore skipped by `benchmark_bwg()`.
+- No production R code or public API behavior changed in this patch release.
+
 # bwTools 0.8.0
 
 ## Public API stability and cross-format hardening

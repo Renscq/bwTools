@@ -1,3 +1,12 @@
+# bwTools development status
+
+Current development release: **0.8.1**
+
+0.8.1 is a test-only patch correcting two invalid benchmark boundary fixtures.
+The 0.8.0 production API and implementation are unchanged.
+
+---
+
 # bwTools development roadmap
 
 ## Design contract

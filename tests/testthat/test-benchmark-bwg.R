@@ -48,7 +48,7 @@ test_that("benchmark_bwg records bounded full-stat skips", {
     iterations = 1L,
     warmup = 0L,
     operations = "stats_full",
-    full_stats_max_bases = 500L
+    full_stats_max_bases = 1500L
   )
 
   full <- benchmark$results[benchmark$results$operation == "stats_full"]
@@ -239,7 +239,7 @@ test_that("write benchmark respects write_max_bases", {
   benchmark <- benchmark_bwg(
     file,
     sample_id = "example",
-    region_sizes = c(100L, 2000L),
+    region_sizes = c(1000L, 2000L),
     iterations = 1L,
     warmup = 0L,
     operations = "write",
