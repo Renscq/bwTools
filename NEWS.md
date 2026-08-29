@@ -1,3 +1,24 @@
+# bwTools 0.8.5
+
+## Multi-sample and mixed-format workflow hardening
+
+- `retrieve_bwg(strand = ...)` now uses row-level strand values for in-memory
+  tracks, so mixed-strand samples produced by merges remain retrievable by
+  exact `+`, `-`, or `*` strand.
+- Lazy BigWig retrieval continues to use file/sample-level strand metadata,
+  preserving indexed access without materializing signal.
+- `result = "track"` normalizes returned sample strand metadata to the exact
+  requested strand for in-memory strand-filtered retrieval.
+- `write_bwg()` now preflights all selected in-memory samples and raises
+  `bwTools_error` before writing any files if one or more selected samples have
+  no signal records, preventing incomplete manifests and partial output.
+- Added workflow regression coverage for mixed BigWig/bedGraph reads,
+  BigWig-only multi-sample lazy reads, duplicate sample IDs, mixed-strand merge
+  retrieval, multi-sample writer manifests, and empty selected samples.
+- Removed the `Development status` section from README as requested.
+- Kept all 15 public function signatures, BwgTrack schema v2, native BigWig
+  binary I/O, statistics, zoom, and merge algorithms unchanged.
+
 # bwTools 0.8.4
 
 ## Cross-implementation BigWig compatibility validation

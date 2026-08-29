@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-29
-# Version: dev008
+# Version: dev009
 # Function: Retrieve bounded genomic regions from BwgTrack-compatible objects
 # Input: BwgTrack and genomic region(s)
 # Output: In-memory signal data.table or BwgTrack subset
@@ -114,14 +114,41 @@ bw_select_retrieve_samples <- function(x, sample_ids = NULL, strand = NULL) {
       !query_strand %in% c("+", "-", "*")) {
     bw_stop("`strand` must be NULL, '+', '-', or '*'.")
   }
-  idx <- which(sample_tbl[["strand"]] == query_strand)
-  sample_tbl[idx][]
+
+  if (is.null(x$data)) {
+    idx <- which(sample_tbl[["strand"]] == query_strand)
+    return(sample_tbl[idx][])
+  }
+
+  data <- data.table::as.data.table(x$data)
+  eligible <- unique(as.character(
+    data[["sample_id"]][data[["strand"]] == query_strand]
+  ))
+  idx <- which(sample_tbl[["sample_id"]] %in% eligible)
+  sample_tbl <- sample_tbl[idx]
+  if (nrow(sample_tbl) > 0L) {
+    data.table::set(
+      sample_tbl,
+      j = "strand",
+      value = rep(query_strand, nrow(sample_tbl))
+    )
+    data.table::set(
+      sample_tbl,
+      j = "has_strand",
+      value = rep(query_strand %in% c("+", "-"), nrow(sample_tbl))
+    )
+  }
+  sample_tbl[]
 }
 
-bw_retrieve_memory_regions <- function(object, sample_ids, regions) {
+bw_retrieve_memory_regions <- function(object, sample_ids, regions, strand = NULL) {
   dt <- data.table::as.data.table(object$data)
   sample_idx <- which(dt[["sample_id"]] %in% sample_ids)
   dt <- dt[sample_idx]
+  if (!is.null(strand) && nrow(dt) > 0L) {
+    strand_idx <- which(dt[["strand"]] == strand)
+    dt <- dt[strand_idx]
+  }
   if (nrow(dt) < 1L) {
     return(bw_empty_signal(include_sample = TRUE))
   }
@@ -262,7 +289,8 @@ bw_retrieve_seqinfo <- function(object, sample_ids, regions) {
 #'   and `end` columns. Use either `regions` or `chrom`/`start`/`end`.
 #' @param sample_ids Optional sample IDs. Defaults to all samples.
 #' @param strand Optional exact strand selector: `+`, `-`, or `*`. `NULL`
-#'   performs no strand filtering.
+#'   performs no strand filtering. Memory-mode tracks filter row-level signal
+#'   strand values; lazy BigWig tracks use sample-level strand metadata.
 #' @param result Result type. `data` returns the standardized signal data.table;
 #'   `track` returns a memory-mode `BwgTrack`.
 #' @return A signal data.table or memory-mode `BwgTrack`.
@@ -308,7 +336,8 @@ retrieve_bwg <- function(
     bw_retrieve_memory_regions(
       x,
       sample_tbl[["sample_id"]],
-      bounded_regions
+      bounded_regions,
+      strand = strand
     )
   }
 

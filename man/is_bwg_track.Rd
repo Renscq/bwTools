@@ -2,12 +2,16 @@
 % Please edit documentation in R/class-bwg-track.R
 \name{is_bwg_track}
 \alias{is_bwg_track}
-\title{Test whether an object follows the BwgTrack contract}
+\title{Test whether an object follows the standardized BwgTrack contract}
 \usage{
 is_bwg_track(x)
 }
 \arguments{
 \item{x}{An R object.}
 }
-\value{Logical scalar.}
-\description{Test whether an object follows the BwgTrack contract}
+\value{
+Logical scalar.
+}
+\description{
+Test whether an object follows the standardized BwgTrack contract
+}

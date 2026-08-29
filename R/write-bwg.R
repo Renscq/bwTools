@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-27
-# Version: dev005
+# Version: dev006
 # Function: Write standardized BwgTrack objects to BigWig, WIG, or bedGraph files
 # Input: BwgTrack-compatible object, output format, and chromosome sizes
 # Output: One signal file per selected sample
@@ -240,6 +240,8 @@ bw_write_lazy_copy <- function(sample_tbl, outdir, format, overwrite) {
 #' @param max_zoom_levels Maximum number of BigWig zoom levels to create when
 #'   `zoom = TRUE`.
 #' @return Invisibly returns a data.table with `sample_id`, `file`, and `format`.
+#'   Every selected in-memory sample must contain signal; validation occurs
+#'   before any output file is written.
 #' @export
 write_bwg <- function(
   x,
@@ -283,12 +285,23 @@ write_bwg <- function(
   if (nrow(dt) < 1L) {
     bw_stop("No in-memory signal records are available for the selected samples.")
   }
+  available_samples <- unique(as.character(dt[["sample_id"]]))
+  missing_signal <- setdiff(
+    as.character(sample_tbl[["sample_id"]]),
+    available_samples
+  )
+  if (length(missing_signal) > 0L) {
+    bw_stop(paste0(
+      "Selected samples contain no in-memory signal records: ",
+      paste(missing_signal, collapse = ", "),
+      "."
+    ))
+  }
 
   out <- vector("list", nrow(sample_tbl))
   for (i in seq_len(nrow(sample_tbl))) {
     sid <- sample_tbl[["sample_id"]][i]
     signal <- dt[which(dt[["sample_id"]] == sid)]
-    if (nrow(signal) < 1L) next
 
     if (identical(format, "bigwig")) {
       cs <- bw_resolve_chrom_sizes(x, chrom_sizes, sid)

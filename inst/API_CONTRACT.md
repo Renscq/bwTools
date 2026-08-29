@@ -1,14 +1,15 @@
 # bwTools public API contract
 
-Version: **schema 2 / bwTools 0.8.4**
+Version: **schema 2 / bwTools 0.8.5**
 
 Version 0.8.0 is the downstream-integration stability baseline. Packages such
 as GeneTrackR should depend on the public functions and schemas documented here
 rather than private `bwTools:::` implementation details.
 
-Version 0.8.4 preserves the same public contract and adds only an optional
-external BigWig compatibility validation harness. External reference software is
-not part of package runtime behavior or the public API.
+Version 0.8.5 preserves the same public contract. The optional external
+BigWig compatibility harness introduced in 0.8.4 remains outside runtime
+behavior. Multi-sample strand retrieval and writer-manifest completeness are
+hardened without changing public function signatures or BwgTrack schema v2.
 
 ## Stable public API
 
@@ -112,6 +113,12 @@ sample_id  chrom  length
 sample_id  chrom  start  end  value  strand
 ```
 
+Strand selection is exact. Lazy BigWig-backed samples use sample/file-level
+strand metadata. Memory-mode tracks use row-level `data$strand`, so a sample
+whose sample-level metadata is `"*"` can still be queried for `+` or `-` when
+its signal table contains those strands. `result = "track"` normalizes the
+returned selected sample metadata to the requested exact strand.
+
 `stats_bwg()` core columns:
 
 ```{text}
@@ -138,6 +145,10 @@ samples  mode  intervals  chromosomes  coordinate  schema_version  backend
 ```{text}
 sample_id  file  format
 ```
+
+For memory-mode objects, every selected sample must contain at least one signal
+record. Validation occurs before any selected sample is written so the manifest
+cannot silently omit an empty selected sample while leaving partial files.
 
 Downstream packages should use public accessors instead of direct assumptions
 about internal object implementation. `metadata_bwg()` is the public metadata

@@ -1,7 +1,7 @@
 Package: bwTools
 Type: Package
 Title: Native R Tools for BigWig, WIG, and bedGraph Files
-Version: 0.8.4
+Version: 0.8.5
 Authors@R: person("Rensc", role = c("aut", "cre"), email = "rensc0718@163.com")
 Description: Provides native R implementations for reading and writing local
     BigWig files, indexed genomic retrieval, interval statistics, automatic
@@ -13,8 +13,10 @@ Description: Provides native R implementations for reading and writing local
     memory and lazy BigWig modes. Version 0.8.3 aligns scalar retrieval
     validation with the shared genomic interval validator. Version 0.8.4 adds
     an external compatibility validation harness for pyBigWig, rtracklayer,
-    and UCSC BigWig utilities without adding runtime dependencies. BigWig
-    binary I/O uses base R random-access
+    and UCSC BigWig utilities without adding runtime dependencies. Version
+    0.8.5 hardens multi-sample and mixed-format workflows, including exact
+    strand retrieval from mixed-strand in-memory tracks and complete writer
+    manifests for selected samples. BigWig binary I/O uses base R random-access
     operations, binary encoding, and zlib compression without bundled C or C++
     code or external UCSC executables. Public in-memory signal coordinates are
     1-based closed.

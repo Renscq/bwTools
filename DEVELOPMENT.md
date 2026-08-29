@@ -1,12 +1,12 @@
 # bwTools development status
 
-Current development release: **0.8.4**
+Current development release: **0.8.5**
 
-0.8.4 extends the 0.8.x stabilization phase with an installed, optional
-cross-implementation BigWig compatibility harness. It keeps the 0.8.0 public
+0.8.5 extends the 0.8.x stabilization phase to multi-sample and mixed-format
+workflows. It retains the 0.8.4 external compatibility harness, the 0.8.0 public
 API stability baseline, the 0.8.2 boundary contract, and the 0.7.5 binary I/O
-performance paths unchanged while validating bwTools files against independent
-pyBigWig/libBigWig, rtracklayer, and UCSC implementations when available.
+performance paths while tightening strand retrieval and writer-manifest
+completeness for downstream integration.
 
 ---
 
@@ -14,7 +14,7 @@ pyBigWig/libBigWig, rtracklayer, and UCSC implementations when available.
 
 ## 0.8.x - API and boundary hardening
 
-Status: **0.8.4 implemented; local R and external compatibility verification required.**
+Status: **0.8.5 implemented; local R and external compatibility verification required.**
 
 Scope:
 
@@ -46,6 +46,35 @@ Acceptance criteria:
   when pyBigWig, rtracklayer, or UCSC utilities are available.
 - External reference implementations remain outside package runtime
   dependencies and normal test requirements.
+
+## 0.8.5 multi-sample and mixed-format workflow hardening
+
+Status: **implemented; local R regression testing required.**
+
+Scope:
+
+- Preserve the 15-function public API, BwgTrack schema v2, and native BigWig
+  binary algorithms.
+- Verify mixed BigWig/bedGraph ingestion keeps source format, sample identity,
+  strand metadata, and automatic memory-mode behavior.
+- Verify multi-BigWig ingestion remains lazy and sample-selectable.
+- Make exact strand retrieval operate on row-level signal for memory-mode
+  mixed-strand samples while retaining sample-level filtering for lazy BigWig.
+- Require one writer-manifest row for every selected in-memory sample with
+  signal and fail before file creation when any selected sample is empty.
+- Remove the README `Development status` section.
+
+Acceptance criteria:
+
+- Mixed BigWig/text reads produce a valid memory-mode BwgTrack with all samples.
+- BigWig-only multi-sample reads remain lazy.
+- Exact `+`, `-`, and `*` retrieval works after a same-sample mixed-strand merge.
+- Multi-sample writing produces exactly one manifest row per selected sample.
+- Empty selected in-memory samples cause `bwTools_error` before partial files are
+  created.
+- Public signatures, schema v2, native BigWig reader/writer, statistics, zoom,
+  and merge algorithms do not change.
+- README contains no `Development status` heading.
 
 ## 0.8.4 external compatibility validation
 

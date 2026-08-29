@@ -8,7 +8,7 @@ execute:
 
 # bwTools
 
-Current development release: **0.8.4**
+Current development release: **0.8.5**
 
 `bwTools` provides native-R reading, writing, indexed retrieval, merging,
 statistics, and performance diagnostics for BigWig, WIG, and bedGraph genomic
@@ -21,7 +21,9 @@ chromosome boundaries, empty query behavior, and `data`/`seqinfo` consistency.
 Version 0.8.3 aligns scalar retrieval interval validation with `stats_bwg()`.
 Version 0.8.4 adds reproducible external BigWig compatibility validation without
 changing the 15-function public API, BwgTrack schema v2, or runtime dependency
-policy.
+policy. Version 0.8.5 hardens multi-sample and mixed-format workflows, including
+exact strand retrieval from mixed-strand memory tracks and complete writer
+manifests for selected samples.
 
 ## Design principles
 
@@ -168,6 +170,32 @@ summary_bwg(bg)
 
 Mixed BigWig/text inputs use memory mode because lazy mode is currently a
 BigWig-only contract.
+
+### Multiple samples and strands
+
+One `read_bwg()` call can ingest multiple files while preserving sample identity,
+source format, and file-level strand metadata:
+
+```{r}
+mixed <- read_bwg(
+  c(bw_file, bedgraph_file),
+  sample_ids = c("rna_plus", "rna_minus"),
+  strand = c("+", "-")
+)
+
+samples_bwg(mixed)
+summary_bwg(mixed)
+```
+
+BigWig-only multi-file input remains lazy; mixing BigWig with WIG or bedGraph
+switches the object to memory mode. `sample_ids` must be unique within one
+`read_bwg()` call.
+
+For memory-mode tracks, `retrieve_bwg(strand = ...)` filters the actual signal
+rows. This remains correct after operations such as `merge_bwg()` where one
+sample can contain both `+` and `-` rows and therefore has `strand = "*"` in
+sample-level metadata. Lazy BigWig tracks continue to use their file-level
+strand metadata for strand selection.
 
 ## 3. BwgTrack object contract
 
@@ -480,11 +508,16 @@ write_bwg(
 )
 ```
 
-The returned manifest always uses:
+The returned manifest always uses one row per selected written sample:
 
 ```{text}
 sample_id  file  format
 ```
+
+For in-memory tracks, `write_bwg()` checks every selected sample before writing.
+If any selected sample has no signal records, the call stops with
+`bwTools_error` before creating partial signal files instead of silently
+omitting that sample from the manifest.
 
 ## 8. Cross-format workflow
 
@@ -679,20 +712,3 @@ devtools::document()
 devtools::test()
 devtools::check()
 ```
-
-## Development status
-
-- **0.1.x** — native reader and initial `BwgTrack` contract.
-- **0.2.x** — native BigWig/WIG/bedGraph writer.
-- **0.3.x** — BigWig zoom levels and interval statistics.
-- **0.4.x** — standardized indexed genomic retrieval.
-- **0.5.x** — automatic merge and explicit arithmetic aggregation.
-- **0.6.x** — public API and `BwgTrack` schema standardization.
-- **0.7.x** — large-file benchmark and reader/writer performance optimization.
-- **0.8.x** — API stability, validation, cross-format consistency, and release hardening.
-- **0.9.x** — release-candidate checks and API freeze.
-- **1.0.0** — stable cross-platform release.
-
-See `inst/API_CONTRACT.md`, `inst/COMPATIBILITY.md`, and `DEVELOPMENT.md` for
-the formal downstream integration, external validation, and development
-acceptance criteria.
