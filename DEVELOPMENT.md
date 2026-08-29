@@ -1,8 +1,8 @@
 # bwTools development status
 
-Current development release: **0.8.7**
+Current development release: **0.8.8**
 
-0.8.7 adds release-quality repository automation after the 0.8.6 documentation
+0.8.8 fixes pkgdown reference indexing after the 0.8.7 GitHub deployment
 consolidation. GitHub Actions now run cross-platform R CMD check and build/deploy
 the pkgdown site, while repository-only checks are separated from package tests.
 The 15-function public API, BwgTrack schema v2, and all production R function
@@ -11,6 +11,19 @@ bodies remain unchanged.
 ---
 
 # bwTools development roadmap
+
+## 0.8.8 pkgdown reference-index fix
+
+- Marked `print.bwToolsBenchmark` and `print.bwToolsTrack` as internal
+  documentation topics so pkgdown does not require them in the user-facing
+  reference index.
+- Preserved both S3 print registrations and their Rd help pages; the change is
+  documentation visibility only and does not change print behavior.
+- Added repository-contract coverage for internal S3 print topics and updated
+  the GitHub workflows to run `tools/check-repository.002.R`.
+- Kept all 15 public function signatures, BwgTrack schema v2, and production
+  function bodies unchanged apart from roxygen metadata.
+
 
 ## 0.8.7 release-quality checks and GitHub pkgdown deployment
 

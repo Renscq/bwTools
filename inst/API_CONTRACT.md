@@ -1,12 +1,12 @@
 # bwTools public API contract
 
-Version: **schema 2 / bwTools 0.8.7**
+Version: **schema 2 / bwTools 0.8.8**
 
 Version 0.8.0 is the downstream-integration stability baseline. Packages such
 as GeneTrackR should depend on the public functions and schemas documented here
 rather than private `bwTools:::` implementation details.
 
-Version 0.8.7 preserves the same public contract. Release-quality repository
+Version 0.8.8 preserves the same public contract. Release-quality repository
 automation, GitHub pkgdown deployment, and R CMD check workflows are added
 without changing any exported signature, production function body, or BwgTrack
 schema-v2 field.

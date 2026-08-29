@@ -104,3 +104,25 @@ test_that("every exported function has return and example documentation", {
   expect_equal(missing_return, character())
   expect_equal(missing_examples, character())
 })
+
+test_that("S3 print help topics stay internal to pkgdown reference", {
+  root <- normalizePath(
+    testthat::test_path("..", ".."),
+    winslash = "/",
+    mustWork = TRUE
+  )
+
+  topics <- c(
+    "print.bwToolsBenchmark.Rd",
+    "print.bwToolsTrack.Rd"
+  )
+
+  for (topic in topics) {
+    lines <- readLines(file.path(root, "man", topic), warn = FALSE)
+    expect_true(
+      any(grepl("^\\\\keyword\\{internal\\}$", lines)),
+      info = paste("Missing internal keyword in", topic)
+    )
+  }
+})
+

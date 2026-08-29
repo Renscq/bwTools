@@ -17,3 +17,4 @@
 \description{
 Print a bwTools benchmark
 }
+\keyword{internal}

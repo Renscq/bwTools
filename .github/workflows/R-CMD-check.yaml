@@ -35,7 +35,7 @@ jobs:
           http-user-agent: ${{ matrix.config.http-user-agent }}
 
       - name: Check repository contract
-        run: Rscript tools/check-repository.001.R
+        run: Rscript tools/check-repository.002.R
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:

@@ -1,3 +1,18 @@
+# bwTools 0.8.8
+
+## pkgdown reference-index fix
+
+- Marked the `print.bwToolsBenchmark` and `print.bwToolsTrack` S3 help topics
+  with the `internal` keyword so pkgdown no longer requires them in the
+  user-facing reference index.
+- Preserved S3 print registration, behavior, and Rd help while keeping the
+  15-function public API index unchanged.
+- Added repository-level regression checks for internal print topics and
+  advanced the repository contract checker to `check-repository.002.R`.
+- Updated GitHub workflows to use the new repository checker.
+- No package function body, public signature, BwgTrack schema, or binary I/O
+  implementation changed.
+
 # bwTools 0.8.7
 
 ## Release-quality checks and GitHub pkgdown deployment

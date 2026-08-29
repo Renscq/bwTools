@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-29
-# Version: dev006
+# Version: dev007
 # Function: Run structured large BigWig performance benchmarks
 # Input: One local BigWig file and benchmark configuration
 # Output: bwToolsBenchmark object with raw and summarized metrics
@@ -607,6 +607,7 @@ benchmark_bwg <- function(
 #' @param x A `bwToolsBenchmark` object.
 #' @param ... Additional arguments reserved for future use.
 #' @return `x`, invisibly.
+#' @keywords internal
 #' @export
 print.bwToolsBenchmark <- function(x, ...) {
   cat("<bwTools BigWig benchmark>\n")

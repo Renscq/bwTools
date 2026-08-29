@@ -17,3 +17,4 @@
 \description{
 Print a bwTools signal track
 }
+\keyword{internal}

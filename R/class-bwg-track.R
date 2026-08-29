@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-29
-# Version: dev006
+# Version: dev007
 # Function: Define and access the standardized BwgTrack object contract
 # Input: Sample metadata, signal data, sequence metadata, and package metadata
 # Output: Standardized BwgTrack-compatible S3 object
@@ -277,6 +277,7 @@ metadata_bwg <- function(x) {
 #' @param x A `bwToolsTrack` object.
 #' @param ... Additional arguments reserved for future use.
 #' @return `x`, invisibly.
+#' @keywords internal
 #' @export
 print.bwToolsTrack <- function(x, ...) {
   bw_assert_bwg(x)
