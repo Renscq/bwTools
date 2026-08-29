@@ -5,21 +5,6 @@ interface. The default `method = "auto"` preserves sample identities and
 signal values without requiring users to determine whether inputs
 contain the same samples or overlapping genomic regions.
 
-In auto mode, different samples remain separate, disjoint regions from
-the same sample are appended, exact duplicates and equal-valued overlaps
-are consolidated automatically, and conflicting overlaps from the same
-sample stop with an instruction to choose `method = "mean"` or
-`method = "sum"`.
-
-Arithmetic methods split partial overlaps at every input boundary.
-Without `groups`, one unique sample ID is preserved, while multiple
-sample IDs are aggregated into a new sample named `merged`. Use `groups`
-to aggregate replicates or treatments into explicit output groups.
-
-File persistence is intentionally excluded. Save the returned `BwgTrack`
-explicitly with
-[`write_bwg()`](https://renscq.github.io/bwTools/reference/write_bwg.md).
-
 ## Usage
 
 ``` r
@@ -39,11 +24,11 @@ merge_bwg(
 
 - ...:
 
-  Two or more validated `BwgTrack` objects.
+  Two or more `BwgTrack`-compatible objects.
 
 - tracks:
 
-  Optional list of validated `BwgTrack` objects. Use either `...` or
+  Optional list of `BwgTrack`-compatible objects. Use either `...` or
   `tracks`.
 
 - method:
@@ -83,45 +68,17 @@ A memory-mode `BwgTrack` containing merged signal.
 
 ## Details
 
-The returned object is always memory mode and retains the public 1-based
-closed coordinate convention. `method = "auto"` never performs numerical
-averaging or summation. Arithmetic behavior must be requested
-explicitly.
+In auto mode, different samples remain separate, disjoint regions from
+the same sample are appended, exact duplicates and equal-valued overlaps
+are consolidated automatically, and conflicting overlaps from the same
+sample stop with an instruction to choose `method = "mean"` or
+`method = "sum"`.
 
-## See also
+Arithmetic methods split partial overlaps at every input boundary.
+Without `groups`, one unique sample ID is preserved, while multiple
+sample IDs are aggregated into a new sample named `merged`. Use `groups`
+to aggregate replicates or treatments into explicit output groups.
 
-[`retrieve_bwg()`](https://renscq.github.io/bwTools/reference/retrieve_bwg.md),
-[`write_bwg()`](https://renscq.github.io/bwTools/reference/write_bwg.md)
-
-## Examples
-
-``` r
-x <- bwg_track(
-  samples = data.frame(sample_id = "sampleA"),
-  data = data.frame(
-    sample_id = "sampleA", chrom = "chr1",
-    start = 1L, end = 10L, value = 1, strand = "*"
-  )
-)
-y <- bwg_track(
-  samples = data.frame(sample_id = "sampleB"),
-  data = data.frame(
-    sample_id = "sampleB", chrom = "chr1",
-    start = 1L, end = 10L, value = 2, strand = "*"
-  )
-)
-merge_bwg(x, y)
-#> <bwTools BwgTrack>
-#>   samples: 2 
-#>   mode: memory 
-#>   coordinate: 1-based closed 
-#>   schema: 2 
-#>   intervals: 2 
-merge_bwg(x, y, method = "mean")
-#> <bwTools BwgTrack>
-#>   samples: 1 
-#>   mode: memory 
-#>   coordinate: 1-based closed 
-#>   schema: 2 
-#>   intervals: 1 
-```
+File persistence is intentionally excluded. Save the returned `BwgTrack`
+explicitly with
+[`write_bwg()`](https://renscq.github.io/bwTools/reference/write_bwg.md).

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">bwTools</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.8</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.9</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -63,38 +63,7 @@
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>The standardized metadata list.</p>
     </div>
-    <div class="section level2">
-    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Standard metadata include <code>coordinate</code>, <code>schema_version</code>, <code>backend</code>, and
-<code>mode</code>. Treat returned metadata as descriptive object state rather than a
-mechanism for mutating the track contract.</p>
-    </div>
-    <div class="section level2">
-    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="samples_bwg.html">samples_bwg()</a></code>, <code><a href="seqinfo_bwg.html">seqinfo_bwg()</a></code></p></div>
-    </div>
 
-    <div class="section level2">
-    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="bwg_track.html">bwg_track</a></span><span class="op">(</span>samples <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>sample_id <span class="op">=</span> <span class="st">"sampleA"</span><span class="op">)</span>, data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  sample_id <span class="op">=</span> <span class="st">"sampleA"</span>, chrom <span class="op">=</span> <span class="st">"chr1"</span>, start <span class="op">=</span> <span class="fl">1L</span>, end <span class="op">=</span> <span class="fl">2L</span>,</span></span>
-<span class="r-in"><span>  value <span class="op">=</span> <span class="fl">1</span>, strand <span class="op">=</span> <span class="st">"*"</span></span></span>
-<span class="r-in"><span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu">metadata_bwg</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $coordinate</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "1-based closed"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $schema_version</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "2"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $backend</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "bwTools-native-R"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $mode</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "memory"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-</code></pre></div>
-    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">bwTools</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.8</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.9</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -44,11 +44,19 @@
 
 <div id="bwtools-development-status" class="section level1">
 
-<p>Current development release: <strong>0.8.8</strong></p>
-<p>0.8.8 fixes pkgdown reference indexing after the 0.8.7 GitHub deployment consolidation. GitHub Actions now run cross-platform R CMD check and build/deploy the pkgdown site, while repository-only checks are separated from package tests. The 15-function public API, BwgTrack schema v2, and all production R function bodies remain unchanged.</p>
+<p>Current development release: <strong>0.8.9</strong></p>
+<p>0.8.9 fixes R CMD check portability after GitHub CI exposed tests that still assumed a source-tree working directory. Installed-package tests now resolve installed assets explicitly, while source-only contracts run through the repository checker. The release also clears the current codetools NOTE without changing the 15-function public API, BwgTrack schema v2, or numerical algorithms.</p>
 <hr></div>
 <div class="section level1">
 <h1 id="bwtools-development-roadmap">bwTools development roadmap<a class="anchor" aria-label="anchor" href="#bwtools-development-roadmap"></a></h1>
+<div class="section level2">
+<h2 id="id_089-r-cmd-check-portability-fix">0.8.9 R CMD check portability fix<a class="anchor" aria-label="anchor" href="#id_089-r-cmd-check-portability-fix"></a></h2>
+<ul><li>Make testthat assertions operate on the installed package layout used by <code>R CMD check</code>, rather than on <code>tests/testthat/../..</code>.</li>
+<li>Keep repository-only README, roxygen, pkgdown, and Rd-source assertions in <code>tools/check-repository.003.R</code>.</li>
+<li>Resolve installed compatibility harness files through <code><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file()</a></code>.</li>
+<li>Qualify <code><a href="https://rdrr.io/r/utils/object.size.html" class="external-link">utils::object.size()</a></code> and register current data.table NSE symbols to remove the codetools NOTE reported by GitHub Actions.</li>
+<li>Preserve all public signatures, schema-v2 fields, and binary I/O algorithms.</li>
+</ul></div>
 <div class="section level2">
 <h2 id="id_088-pkgdown-reference-index-fix">0.8.8 pkgdown reference-index fix<a class="anchor" aria-label="anchor" href="#id_088-pkgdown-reference-index-fix"></a></h2>
 <ul><li>Marked <code>print.bwToolsBenchmark</code> and <code>print.bwToolsTrack</code> as internal documentation topics so pkgdown does not require them in the user-facing reference index.</li>

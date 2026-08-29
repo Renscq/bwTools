@@ -1,16 +1,32 @@
 # bwTools development status
 
-Current development release: **0.8.8**
+Current development release: **0.8.9**
 
-0.8.8 fixes pkgdown reference indexing after the 0.8.7 GitHub deployment
-consolidation. GitHub Actions now run cross-platform R CMD check and
-build/deploy the pkgdown site, while repository-only checks are
-separated from package tests. The 15-function public API, BwgTrack
-schema v2, and all production R function bodies remain unchanged.
+0.8.9 fixes R CMD check portability after GitHub CI exposed tests that
+still assumed a source-tree working directory. Installed-package tests
+now resolve installed assets explicitly, while source-only contracts run
+through the repository checker. The release also clears the current
+codetools NOTE without changing the 15-function public API, BwgTrack
+schema v2, or numerical algorithms.
 
 ------------------------------------------------------------------------
 
 # bwTools development roadmap
+
+## 0.8.9 R CMD check portability fix
+
+- Make testthat assertions operate on the installed package layout used
+  by `R CMD check`, rather than on `tests/testthat/../..`.
+- Keep repository-only README, roxygen, pkgdown, and Rd-source
+  assertions in `tools/check-repository.003.R`.
+- Resolve installed compatibility harness files through
+  [`system.file()`](https://rdrr.io/r/base/system.file.html).
+- Qualify
+  [`utils::object.size()`](https://rdrr.io/r/utils/object.size.html) and
+  register current data.table NSE symbols to remove the codetools NOTE
+  reported by GitHub Actions.
+- Preserve all public signatures, schema-v2 fields, and binary I/O
+  algorithms.
 
 ## 0.8.8 pkgdown reference-index fix
 

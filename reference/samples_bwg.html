@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">bwTools</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.8</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.9</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,7 +38,7 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Return sample metadata</h1>
-      <small class="dont-index">Source: <a href="https://github.com/Renscq/bwTools/blob/main/R/class-bwg-track.R" class="external-link"><code>R/class-bwg-track.R</code></a></small>
+
       <div class="d-none name"><code>samples_bwg.Rd</code></div>
     </div>
 
@@ -58,7 +58,6 @@
 <dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
 <dd><p>A validated <code>BwgTrack</code> object.</p></dd>
 
-
 <dt id="arg-sample-ids">sample_ids<a class="anchor" aria-label="anchor" href="#arg-sample-ids"></a></dt>
 <dd><p>Optional sample IDs. Defaults to all samples.</p></dd>
 
@@ -67,27 +66,7 @@
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A copy of the standardized sample metadata data.table.</p>
     </div>
-    <div class="section level2">
-    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>The returned table is a copy and can be modified without changing <code>x</code>.</p>
-    </div>
-    <div class="section level2">
-    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="seqinfo_bwg.html">seqinfo_bwg()</a></code>, <code><a href="metadata_bwg.html">metadata_bwg()</a></code></p></div>
-    </div>
 
-    <div class="section level2">
-    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="bwg_track.html">bwg_track</a></span><span class="op">(</span>samples <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>sample_id <span class="op">=</span> <span class="st">"sampleA"</span><span class="op">)</span>, data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  sample_id <span class="op">=</span> <span class="st">"sampleA"</span>, chrom <span class="op">=</span> <span class="st">"chr1"</span>, start <span class="op">=</span> <span class="fl">1L</span>, end <span class="op">=</span> <span class="fl">2L</span>,</span></span>
-<span class="r-in"><span>  value <span class="op">=</span> <span class="fl">1</span>, strand <span class="op">=</span> <span class="st">"*"</span></span></span>
-<span class="r-in"><span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu">samples_bwg</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    sample_id   file format strand has_strand</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       &lt;char&gt; &lt;char&gt; &lt;char&gt; &lt;char&gt;     &lt;lgcl&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:   sampleA   &lt;NA&gt; memory      *      FALSE</span>
-</code></pre></div>
-    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

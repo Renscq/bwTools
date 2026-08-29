@@ -18,7 +18,7 @@ Construct, validate, inspect, and summarize standardized tracks.
 - [`bwg_track()`](https://renscq.github.io/bwTools/reference/bwg_track.md)
   : Construct a standardized BwgTrack object
 - [`is_bwg_track()`](https://renscq.github.io/bwTools/reference/is_bwg_track.md)
-  : Test whether an object follows the standardized BwgTrack contract
+  : Test whether an object follows the BwgTrack contract
 - [`validate_bwg()`](https://renscq.github.io/bwTools/reference/validate_bwg.md)
   : Validate a BwgTrack object
 - [`samples_bwg()`](https://renscq.github.io/bwTools/reference/samples_bwg.md)

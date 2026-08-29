@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">bwTools</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.8</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.9</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,7 +38,7 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Summarize a BwgTrack object</h1>
-      <small class="dont-index">Source: <a href="https://github.com/Renscq/bwTools/blob/main/R/retrieve-bwg.R" class="external-link"><code>R/retrieve-bwg.R</code></a></small>
+
       <div class="d-none name"><code>summary_bwg.Rd</code></div>
     </div>
 
@@ -53,39 +53,14 @@
 
     <div class="section level2">
     <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
-
-
-<dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
+    <dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
 <dd><p>A validated <code>BwgTrack</code> object.</p></dd>
-
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A one-row data.table describing the object contract and dimensions.</p>
     </div>
-    <div class="section level2">
-    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>This is a lightweight object summary and does not calculate genomic signal
-statistics. Use <code><a href="stats_bwg.html">stats_bwg()</a></code> for interval-level quantitative summaries.</p>
-    </div>
-    <div class="section level2">
-    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="stats_bwg.html">stats_bwg()</a></code>, <code><a href="samples_bwg.html">samples_bwg()</a></code></p></div>
-    </div>
 
-    <div class="section level2">
-    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">bw_file</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"bwtools_example.bigwig"</span>, package <span class="op">=</span> <span class="st">"bwTools"</span>, mustWork <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="read_bwg.html">read_bwg</a></span><span class="op">(</span><span class="va">bw_file</span>, sample_ids <span class="op">=</span> <span class="st">"example"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu">summary_bwg</span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    samples   mode intervals chromosomes     coordinate schema_version</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      &lt;int&gt; &lt;char&gt;     &lt;int&gt;       &lt;int&gt;         &lt;char&gt;         &lt;char&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:       1   lazy        NA           3 1-based closed              2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>             backend</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>              &lt;char&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: bwTools-native-R</span>
-</code></pre></div>
-    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

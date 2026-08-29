@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">bwTools</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.8</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.9</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,17 @@
       <small>Source: <a href="https://github.com/Renscq/bwTools/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.8.9" id="bwtools-089">bwTools 0.8.9<a class="anchor" aria-label="anchor" href="#bwtools-089"></a></h2>
+<div class="section level3">
+<h3 id="r-cmd-check-portability-fixes-0-8-9">R CMD check portability fixes<a class="anchor" aria-label="anchor" href="#r-cmd-check-portability-fixes-0-8-9"></a></h3>
+<ul><li>Reworked package tests to validate installed package assets through <code><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file()</a></code> and <code><a href="https://rdrr.io/r/utils/packageDescription.html" class="external-link">packageDescription()</a></code> instead of assuming the test working directory is the source-package root.</li>
+<li>Moved source-tree-only README, roxygen, pkgdown, and generated-Rd contracts into <code>tools/check-repository.003.R</code>, which runs before GitHub CI jobs.</li>
+<li>Kept installed compatibility checks pointed at <code>compatibility/</code> and <code>COMPATIBILITY.md</code>, matching how <code>inst/</code> assets are installed by R.</li>
+<li>Qualified <code><a href="https://rdrr.io/r/utils/object.size.html" class="external-link">utils::object.size()</a></code> in benchmark helpers and registered the data.table non-standard-evaluation symbols reported by <code>R CMD check</code>.</li>
+<li>Preserved the 15-function public API, BwgTrack schema v2, binary I/O algorithms, and all numerical results.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.8.8" id="bwtools-088">bwTools 0.8.8<a class="anchor" aria-label="anchor" href="#bwtools-088"></a></h2>
 <div class="section level3">

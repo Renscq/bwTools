@@ -33,34 +33,3 @@ bwg_track(samples, data = NULL, seqinfo = NULL, meta = list())
 ## Value
 
 A validated object inheriting from `BwgTrack` and `bwToolsTrack`.
-
-## Details
-
-Signal coordinates supplied in `data` must already be 1-based closed.
-Construction normalizes standard columns, records schema version 2, and
-validates cross-slot sample/chromosome consistency before returning.
-
-## See also
-
-[`validate_bwg()`](https://renscq.github.io/bwTools/reference/validate_bwg.md),
-[`read_bwg()`](https://renscq.github.io/bwTools/reference/read_bwg.md)
-
-## Examples
-
-``` r
-x <- bwg_track(
-  samples = data.frame(sample_id = "sampleA"),
-  data = data.frame(
-    sample_id = "sampleA", chrom = "chr1",
-    start = 1L, end = 10L, value = 2, strand = "+"
-  ),
-  seqinfo = data.frame(chrom = "chr1", length = 100L)
-)
-x
-#> <bwTools BwgTrack>
-#>   samples: 1 
-#>   mode: memory 
-#>   coordinate: 1-based closed 
-#>   schema: 2 
-#>   intervals: 1 
-```

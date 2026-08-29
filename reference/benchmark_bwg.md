@@ -126,34 +126,3 @@ metric is process RSS.
 This diagnostic function is intentionally file-oriented because its
 purpose is to measure file I/O. Normal analysis functions continue to
 consume validated `BwgTrack` objects.
-
-`benchmark_bwg()` is deliberately separated from normal analysis. Writer
-cases use independent repetition and density guards so profiling does
-not accidentally trigger excessive work on dense tracks. Reported heap
-metrics are R-heap diagnostics rather than process resident-set size.
-
-## See also
-
-[`read_bwg()`](https://renscq.github.io/bwTools/reference/read_bwg.md),
-[`retrieve_bwg()`](https://renscq.github.io/bwTools/reference/retrieve_bwg.md),
-[`stats_bwg()`](https://renscq.github.io/bwTools/reference/stats_bwg.md),
-[`write_bwg()`](https://renscq.github.io/bwTools/reference/write_bwg.md)
-
-## Examples
-
-``` r
-if (FALSE) { # \dontrun{
-bw_file <- system.file(
-  "extdata", "bwtools_example.bigwig",
-  package = "bwTools", mustWork = TRUE
-)
-bench <- benchmark_bwg(
-  bw_file,
-  sample_id = "example",
-  region_sizes = 1000L,
-  iterations = 1L,
-  warmup = 0L
-)
-bench$summary
-} # }
-```

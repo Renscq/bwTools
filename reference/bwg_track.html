@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">bwTools</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.8</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.9</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,7 +38,7 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Construct a standardized BwgTrack object</h1>
-      <small class="dont-index">Source: <a href="https://github.com/Renscq/bwTools/blob/main/R/class-bwg-track.R" class="external-link"><code>R/class-bwg-track.R</code></a></small>
+
       <div class="d-none name"><code>bwg_track.Rd</code></div>
     </div>
 
@@ -56,20 +56,13 @@
 
 
 <dl><dt id="arg-samples">samples<a class="anchor" aria-label="anchor" href="#arg-samples"></a></dt>
-<dd><p>Sample metadata table containing <code>sample_id</code>. Missing standard
-columns are normalized automatically.</p></dd>
-
+<dd><p>Sample metadata table containing <code>sample_id</code>. Missing standard columns are normalized automatically.</p></dd>
 
 <dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
 <dd><p>Optional in-memory signal table using 1-based closed coordinates.</p></dd>
 
-
 <dt id="arg-seqinfo">seqinfo<a class="anchor" aria-label="anchor" href="#arg-seqinfo"></a></dt>
-<dd><p>Optional chromosome metadata table containing <code>chrom</code> and
-<code>length</code>. When <code>sample_id</code> is absent, rows are replicated across samples.
-When supplied, every signal sample/chromosome pair must be represented and
-signal intervals may not exceed a known chromosome length.</p></dd>
-
+<dd><p>Optional chromosome metadata table containing <code>chrom</code> and <code>length</code>. When <code>sample_id</code> is absent, rows are replicated across samples. When supplied, every signal sample/chromosome pair must be represented and signal intervals may not exceed a known chromosome length.</p></dd>
 
 <dt id="arg-meta">meta<a class="anchor" aria-label="anchor" href="#arg-meta"></a></dt>
 <dd><p>Optional metadata list.</p></dd>
@@ -79,36 +72,7 @@ signal intervals may not exceed a known chromosome length.</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A validated object inheriting from <code>BwgTrack</code> and <code>bwToolsTrack</code>.</p>
     </div>
-    <div class="section level2">
-    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Signal coordinates supplied in <code>data</code> must already be 1-based closed.
-Construction normalizes standard columns, records schema version 2, and
-validates cross-slot sample/chromosome consistency before returning.</p>
-    </div>
-    <div class="section level2">
-    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="validate_bwg.html">validate_bwg()</a></code>, <code><a href="read_bwg.html">read_bwg()</a></code></p></div>
-    </div>
 
-    <div class="section level2">
-    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu">bwg_track</span><span class="op">(</span></span></span>
-<span class="r-in"><span>  samples <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>sample_id <span class="op">=</span> <span class="st">"sampleA"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    sample_id <span class="op">=</span> <span class="st">"sampleA"</span>, chrom <span class="op">=</span> <span class="st">"chr1"</span>,</span></span>
-<span class="r-in"><span>    start <span class="op">=</span> <span class="fl">1L</span>, end <span class="op">=</span> <span class="fl">10L</span>, value <span class="op">=</span> <span class="fl">2</span>, strand <span class="op">=</span> <span class="st">"+"</span></span></span>
-<span class="r-in"><span>  <span class="op">)</span>,</span></span>
-<span class="r-in"><span>  seqinfo <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>chrom <span class="op">=</span> <span class="st">"chr1"</span>, length <span class="op">=</span> <span class="fl">100L</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">x</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;bwTools BwgTrack&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   samples: 1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   mode: memory </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   coordinate: 1-based closed </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   schema: 2 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   intervals: 1 </span>
-</code></pre></div>
-    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 
