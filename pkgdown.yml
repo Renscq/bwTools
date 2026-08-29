@@ -1,0 +1,14 @@
+pandoc: 3.8.3
+pkgdown: 2.2.1
+pkgdown_sha: ~
+articles:
+  file-formats: file-formats.html
+  getting-started: getting-started.html
+  merge-multisample: merge-multisample.html
+  performance-compatibility: performance-compatibility.html
+  reading-writing: reading-writing.html
+  retrieve-stats: retrieve-stats.html
+last_built: 2026-08-29T10:40Z
+urls:
+  reference: https://renscq.github.io/bwTools/reference
+  article: https://renscq.github.io/bwTools/articles

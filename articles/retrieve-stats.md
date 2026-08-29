@@ -1,0 +1,105 @@
+# Regional retrieval and statistics
+
+## Regional retrieval
+
+[`retrieve_bwg()`](https://renscq.github.io/bwTools/reference/retrieve_bwg.md)
+accepts either one interval or a table of intervals. Public coordinates
+are **1-based closed**.
+
+``` r
+
+library(bwTools)
+
+bw_file <- system.file("extdata", "bwtools_example.bigwig", package = "bwTools")
+bw <- read_bwg(bw_file, sample_ids = "example")
+
+one <- retrieve_bwg(bw, "chr1", 500L, 1600L)
+```
+
+For several regions:
+
+``` r
+
+regions <- data.frame(
+  chrom = c("chr1", "chr1", "chr2"),
+  start = c(510L, 561L, 450L),
+  end = c(560L, 600L, 900L)
+)
+
+many <- retrieve_bwg(bw, regions = regions)
+```
+
+Overlapping or directly adjacent query regions are normalized before
+retrieval. Signal intervals crossing a boundary are clipped but are
+never rebased.
+
+## Boundary behavior
+
+When complete chromosome lengths are known:
+
+    unknown chromosome             -> error
+    end beyond chromosome length   -> clipped
+    start beyond chromosome length -> typed empty result
+
+WIG and bedGraph do not encode chromosome lengths. Their inferred
+`seqinfo` therefore commonly has `length = NA`; unknown names in such
+incomplete metadata are treated as no signal rather than as an invalid
+reference chromosome.
+
+## Strand filtering
+
+``` r
+
+plus <- retrieve_bwg(
+  bw,
+  chrom = "chr1",
+  start = 1L,
+  end = 5000L,
+  strand = "+"
+)
+```
+
+Memory-mode tracks filter row-level `strand` values. Lazy BigWig tracks
+use file-level strand metadata.
+
+## Exact statistics
+
+[`stats_bwg()`](https://renscq.github.io/bwTools/reference/stats_bwg.md)
+supports `mean`, `stdev`, `max`, `min`, `coverage`, and `sum`:
+
+``` r
+
+exact <- stats_bwg(
+  bw,
+  chrom = "chr1",
+  start = 1L,
+  end = 10000L,
+  n_bins = 100L,
+  stat = "mean",
+  use_zoom = FALSE
+)
+```
+
+Exact lazy-BigWig statistics stream overlapping full-resolution blocks
+into bin accumulators instead of first materializing the complete signal
+table.
+
+## Zoom-aware statistics
+
+``` r
+
+fast <- stats_bwg(
+  bw,
+  chrom = "chr1",
+  start = 1L,
+  end = 1000000L,
+  n_bins = 1000L,
+  stat = "mean",
+  use_zoom = TRUE
+)
+```
+
+Inspect `source` and `resolution` in the result. A small high-resolution
+query may still use `source = "full"` when no stored zoom level is
+appropriate. Use `use_zoom = FALSE` when exact query-boundary values are
+required.

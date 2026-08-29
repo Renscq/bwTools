@@ -1,0 +1,191 @@
+# bwTools
+
+[![R-CMD-check](https://github.com/Renscq/bwTools/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/Renscq/bwTools/actions/workflows/R-CMD-check.yaml)
+[![pkgdown](https://github.com/Renscq/bwTools/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/Renscq/bwTools/actions/workflows/pkgdown.yaml)
+
+Current release: **0.8.8**
+
+`bwTools` provides native-R tools for BigWig, WIG, and bedGraph genomic
+signal tracks. It supports BigWig binary reading and writing, indexed
+regional retrieval, exact and zoom-aware statistics, multi-track
+merging, format conversion, and performance diagnostics without
+requiring Rcpp, bundled C/C++ code, or UCSC executables at runtime.
+
+## Key features
+
+- Native-R BigWig reader and writer with indexed random access.
+- Native BigWig zoom summaries for fast large-region statistics.
+- WIG and bedGraph reading and writing, including gzip-compressed text
+  output.
+- Standardized `BwgTrack` schema v2 for single- and multi-sample
+  workflows.
+- Exact strand-aware retrieval for in-memory tracks.
+- Conservative lossless merging and explicit mean/sum aggregation.
+- Stable `bwTools_error` conditions for downstream packages.
+- Optional external compatibility checks for pyBigWig, rtracklayer, and
+  UCSC utilities without adding runtime dependencies.
+
+## Installation
+
+Install the development release from GitHub:
+
+`{r} install.packages("pak") pak::pak("Renscq/bwTools")`
+
+Package website: <https://renscq.github.io/bwTools/>
+
+For package development and local validation:
+
+`{r} devtools::document() devtools::test() devtools::check()`
+
+## Quick start
+
+The package ships a small BigWig example:
+
+\`\`\`{r} library(bwTools)
+
+bw_file \<- system.file( “extdata”, “bwtools_example.bigwig”, package =
+“bwTools”, mustWork = TRUE )
+
+
+    Read it lazily:
+
+    ```{r}
+    bw <- read_bwg(
+      bw_file,
+      sample_ids = "example"
+    )
+
+    summary_bwg(bw)
+    samples_bwg(bw)
+    seqinfo_bwg(bw)
+
+Retrieve a genomic interval using public **1-based closed** coordinates:
+
+`{r} signal <- retrieve_bwg( bw, chrom = "chr1", start = 500L, end = 1600L )`
+
+Calculate exact statistics:
+
+`{r} stats <- stats_bwg( bw, chrom = "chr1", start = 1L, end = 10000L, n_bins = 10L, stat = "mean", use_zoom = FALSE )`
+
+Create a writable regional track and persist it:
+
+\`\`\`{r} region_track \<- retrieve_bwg( bw, chrom = “chr1”, start = 1L,
+end = 10000L, result = “track” )
+
+manifest \<- write_bwg( region_track, outdir = “bwtools-output”, format
+= “bigwig”, overwrite = TRUE )
+
+
+    The standard data flow is:
+
+    ```{text}
+    file
+      ↓
+    read_bwg()
+      ↓
+    BwgTrack
+      ↓
+    retrieve_bwg() / merge_bwg() / stats_bwg()
+      ↓
+    write_bwg()
+
+## Coordinates and object contract
+
+Public in-memory coordinates are always **1-based closed**. BigWig and
+bedGraph coordinates on disk are **0-based half-open**; bwTools handles
+the conversion at the file boundary.
+
+A `BwgTrack` contains:
+
+`{text} BwgTrack ├── samples ├── data ├── seqinfo └── meta`
+
+Use
+[`bwg_track()`](https://renscq.github.io/bwTools/reference/bwg_track.md)
+to construct a track explicitly,
+[`validate_bwg()`](https://renscq.github.io/bwTools/reference/validate_bwg.md)
+to validate the public contract, and
+[`is_bwg_track()`](https://renscq.github.io/bwTools/reference/is_bwg_track.md)
+for a logical contract check. Access metadata through
+[`samples_bwg()`](https://renscq.github.io/bwTools/reference/samples_bwg.md),
+[`seqinfo_bwg()`](https://renscq.github.io/bwTools/reference/seqinfo_bwg.md),
+[`metadata_bwg()`](https://renscq.github.io/bwTools/reference/metadata_bwg.md),
+and
+[`zoominfo_bwg()`](https://renscq.github.io/bwTools/reference/zoominfo_bwg.md)
+rather than relying on private implementation details.
+
+## Multiple samples and strands
+
+[`read_bwg()`](https://renscq.github.io/bwTools/reference/read_bwg.md)
+accepts multiple files with explicit sample IDs and strand labels:
+
+\`\`\`{r} bedgraph_file \<- system.file( “extdata”,
+“bwtools_example.bedGraph”, package = “bwTools”, mustWork = TRUE )
+
+mixed \<- read_bwg( c(bw_file, bedgraph_file), sample_ids =
+c(“rna_plus”, “rna_minus”), strand = c(“+”, “-”) )
+
+
+    BigWig-only multi-file input remains lazy. Mixing BigWig with WIG or bedGraph
+    uses memory mode. In-memory mixed-strand tracks are filtered from row-level
+    `data$strand`; lazy BigWig tracks use file-level strand metadata.
+
+    ## Documentation
+
+    The user workflow is split into focused articles:
+
+    | Article | Scope |
+    | --- | --- |
+    | [Getting started](https://renscq.github.io/bwTools/articles/getting-started.html) | End-to-end workflow and `BwgTrack` basics |
+    | [Reading and writing](https://renscq.github.io/bwTools/articles/reading-writing.html) | BigWig/WIG/bedGraph I/O and manifests |
+    | [Retrieval and statistics](https://renscq.github.io/bwTools/articles/retrieve-stats.html) | Regions, boundaries, exact and zoom statistics |
+    | [Merge and multi-sample workflows](https://renscq.github.io/bwTools/articles/merge-multisample.html) | Sample identity, strands, aggregation |
+    | [File formats and coordinates](https://renscq.github.io/bwTools/articles/file-formats.html) | Format detection and coordinate conventions |
+    | [Performance and compatibility](https://renscq.github.io/bwTools/articles/performance-compatibility.html) | Benchmarking and external validation |
+
+    ## Public API
+
+    | Function | Responsibility |
+    | --- | --- |
+    | `detect_bwg_format()` | Detect BigWig, WIG, or bedGraph |
+    | `read_bwg()` | Read one or more signal files |
+    | `bwg_track()` | Construct a standardized track |
+    | `validate_bwg()` | Validate the public object contract |
+    | `is_bwg_track()` | Test the object contract |
+    | `samples_bwg()` | Access sample metadata |
+    | `seqinfo_bwg()` | Access chromosome metadata |
+    | `metadata_bwg()` | Access object metadata |
+    | `zoominfo_bwg()` | Access stored BigWig zoom metadata |
+    | `retrieve_bwg()` | Retrieve one or more genomic regions |
+    | `merge_bwg()` | Merge or aggregate tracks |
+    | `stats_bwg()` | Calculate interval statistics |
+    | `summary_bwg()` | Summarize a track |
+    | `write_bwg()` | Write BigWig, WIG, or bedGraph |
+    | `benchmark_bwg()` | Profile large BigWig workflows |
+
+    The 15-function public API and BwgTrack schema v2 are regression-tested.
+
+    ## Errors
+
+    Intentional user-facing errors inherit from `bwTools_error`, allowing downstream
+    packages to catch package errors without matching English text:
+
+    ```{r}
+    tryCatch(
+      retrieve_bwg(bw, "chr1", 0L, 100L),
+      bwTools_error = function(e) conditionMessage(e)
+    )
+
+## Performance diagnostics
+
+[`benchmark_bwg()`](https://renscq.github.io/bwTools/reference/benchmark_bwg.md)
+is a development and profiling utility rather than a routine analysis
+step. See [Performance and
+compatibility](https://renscq.github.io/bwTools/articles/performance-compatibility.html)
+for reader, statistics, and writer profiling examples.
+
+## External compatibility validation
+
+Optional bidirectional BigWig checks are installed under
+`inst/compatibility/`. They can use pyBigWig/libBigWig, rtracklayer, and
+UCSC utilities when those tools are available, but none is a bwTools
+runtime dependency.

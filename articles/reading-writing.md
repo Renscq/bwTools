@@ -1,0 +1,139 @@
+# Reading and writing signal tracks
+
+## Reading files
+
+[`read_bwg()`](https://renscq.github.io/bwTools/reference/read_bwg.md)
+accepts BigWig, WIG, and bedGraph inputs. `format = "auto"` calls
+[`detect_bwg_format()`](https://renscq.github.io/bwTools/reference/detect_bwg_format.md)
+independently for each file.
+
+``` r
+
+library(bwTools)
+
+bw_file <- system.file("extdata", "bwtools_example.bigwig", package = "bwTools")
+bg_file <- system.file("extdata", "bwtools_example.bedGraph", package = "bwTools")
+
+detect_bwg_format(bw_file)
+detect_bwg_format(bg_file)
+
+bw <- read_bwg(bw_file, sample_ids = "bw")
+bg <- read_bwg(bg_file, sample_ids = "bg")
+```
+
+BigWig-only inputs use lazy mode by default. WIG and bedGraph are
+materialized in memory. Mixed binary/text input also uses memory mode:
+
+``` r
+
+mixed <- read_bwg(
+  c(bw_file, bg_file),
+  sample_ids = c("binary", "text")
+)
+summary_bwg(mixed)
+```
+
+## Sample and strand metadata
+
+Use unique `sample_ids` and optional file-level strand labels:
+
+``` r
+
+tracks <- read_bwg(
+  c(bw_file, bg_file),
+  sample_ids = c("plus", "minus"),
+  strand = c("+", "-")
+)
+
+samples_bwg(tracks)
+```
+
+## Writing files
+
+[`write_bwg()`](https://renscq.github.io/bwTools/reference/write_bwg.md)
+writes one file per selected sample and returns a manifest with
+`sample_id`, `file`, and `format`.
+
+``` r
+
+region <- retrieve_bwg(
+  bw,
+  chrom = "chr1",
+  start = 1L,
+  end = 5000L,
+  result = "track"
+)
+
+manifest <- write_bwg(
+  region,
+  outdir = "bigwig-out",
+  format = "bigwig",
+  overwrite = TRUE
+)
+```
+
+Native BigWig output contains zoom levels by default. Disable them only
+when a full-resolution-only file is required:
+
+``` r
+
+write_bwg(
+  region,
+  outdir = "bigwig-nozoom",
+  format = "bigwig",
+  overwrite = TRUE,
+  zoom = FALSE
+)
+```
+
+## WIG and bedGraph output
+
+``` r
+
+write_bwg(
+  region,
+  outdir = "wig-out",
+  format = "wig",
+  overwrite = TRUE
+)
+
+write_bwg(
+  region,
+  outdir = "bedgraph-out",
+  format = "bedgraph",
+  overwrite = TRUE,
+  compress = TRUE
+)
+```
+
+`compress = TRUE` applies to WIG/bedGraph text output. BigWig block
+compression is part of the BigWig format and is handled internally.
+
+## Chromosome sizes
+
+BigWig output requires chromosome lengths. Complete lengths are taken
+from
+[`seqinfo_bwg()`](https://renscq.github.io/bwTools/reference/seqinfo_bwg.md)
+when available, or supplied explicitly with `chrom_sizes`:
+
+``` r
+
+chrom_sizes <- data.frame(
+  chrom = "chr1",
+  length = 100000L
+)
+
+write_bwg(
+  region,
+  outdir = "bigwig-explicit-sizes",
+  format = "bigwig",
+  chrom_sizes = chrom_sizes,
+  overwrite = TRUE
+)
+```
+
+For multi-sample in-memory tracks, every selected sample must contain
+signal.
+[`write_bwg()`](https://renscq.github.io/bwTools/reference/write_bwg.md)
+checks this before creating any signal file so partial manifests are not
+produced silently.
