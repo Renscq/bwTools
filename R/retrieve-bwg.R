@@ -1,6 +1,6 @@
 # Author: Rensc
 # Date: 2026-08-29
-# Version: dev007
+# Version: dev008
 # Function: Retrieve bounded genomic regions from BwgTrack-compatible objects
 # Input: BwgTrack and genomic region(s)
 # Output: In-memory signal data.table or BwgTrack subset
@@ -13,10 +13,11 @@ bw_normalize_retrieve_regions <- function(chrom = NULL, start = NULL, end = NULL
     if (length(chrom) != 1L || length(start) != 1L || length(end) != 1L) {
       bw_stop("`chrom`, `start`, and `end` must be scalar when `regions` is not supplied.")
     }
+    interval <- bw_validate_genomic_interval(chrom, start, end)
     regions <- data.table::data.table(
-      chrom = chrom,
-      start = start,
-      end = end
+      chrom = interval$chrom,
+      start = interval$start,
+      end = interval$end
     )
   } else {
     if (!is.null(chrom) || !is.null(start) || !is.null(end)) {

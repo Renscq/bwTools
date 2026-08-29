@@ -1,11 +1,11 @@
 # bwTools development status
 
-Current development release: **0.8.2**
+Current development release: **0.8.3**
 
-0.8.2 is the boundary and edge-case hardening release. It keeps the 0.8.0
-public API stability baseline and 0.7.5 binary I/O performance paths while
-standardizing genomic query bounds, empty-result schemas, and data/seqinfo
-coordinate consistency.
+0.8.3 is a focused consistency patch on the 0.8.2 boundary-hardening release.
+It keeps the 0.8.0 public API stability baseline and 0.7.5 binary I/O
+performance paths while making scalar `retrieve_bwg()` interval validation
+reuse the shared genomic query validator already used by `stats_bwg()`.
 
 ---
 
@@ -13,7 +13,7 @@ coordinate consistency.
 
 ## 0.8.x - API and boundary hardening
 
-Status: **0.8.2 implemented; local R verification required.**
+Status: **0.8.3 implemented; local R verification required.**
 
 Scope:
 

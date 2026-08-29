@@ -1,10 +1,13 @@
 # bwTools public API contract
 
-Version: **schema 2 / bwTools 0.8.2**
+Version: **schema 2 / bwTools 0.8.3**
 
 Version 0.8.0 is the downstream-integration stability baseline. Packages such
 as GeneTrackR should depend on the public functions and schemas documented here
 rather than private `bwTools:::` implementation details.
+
+Version 0.8.3 preserves the same contract and only aligns scalar retrieval
+interval validation with the shared public query rules.
 
 ## Stable public API
 

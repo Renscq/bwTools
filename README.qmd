@@ -8,7 +8,7 @@ execute:
 
 # bwTools
 
-Current development release: **0.8.2**
+Current development release: **0.8.3**
 
 `bwTools` provides native-R reading, writing, indexed retrieval, merging,
 statistics, and performance diagnostics for BigWig, WIG, and bedGraph genomic
@@ -17,7 +17,8 @@ signal tracks.
 Version 0.8.0 is the **API-stability baseline** before downstream integration.
 The optimized BigWig reader, writer, zoom pyramid, indexed retrieval, and
 exact/zoom statistics established in 0.7.x are retained. Version 0.8.2 hardens
-chromosome boundaries, empty query behavior, and `data`/`seqinfo` consistency
+chromosome boundaries, empty query behavior, and `data`/`seqinfo` consistency.
+Version 0.8.3 aligns scalar retrieval interval validation with `stats_bwg()`
 without changing the 15-function public API or BwgTrack schema v2.
 
 ## Design principles

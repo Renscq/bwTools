@@ -1,3 +1,16 @@
+# bwTools 0.8.3
+
+## Scalar retrieval validation consistency
+
+- `retrieve_bwg(chrom, start, end)` now reuses the same shared genomic interval
+  validator as `stats_bwg()`.
+- Invalid scalar intervals such as `end < start` now return the same precise
+  `bwTools_error` message across retrieval and statistics.
+- Batch `regions=` validation remains unchanged and continues to report invalid
+  rows with the table-level interval error.
+- No public function signatures, BwgTrack schema, BigWig binary I/O, or
+  performance paths changed.
+
 # bwTools 0.8.2
 
 ## Boundary and edge-case hardening
